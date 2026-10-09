@@ -7,7 +7,7 @@ import { layouts, geometry } from '../src/layout.mjs';
 const result = await build({ entryPoints: ['src/slideshow.ts'], bundle: true, write: false, format: 'esm', platform: 'node' });
 globalThis.Image = Image;
 globalThis.document = { createElement() { return createCanvas(1, 1); } };
-const { slideshowGif, slideshowLayout } = await import('data:text/javascript;base64,' + Buffer.from(result.outputFiles[0].text).toString('base64'));
+const { slideshowGif, slideshowLayout, slideshowOptions } = await import('data:text/javascript;base64,' + Buffer.from(result.outputFiles[0].text).toString('base64'));
 const options = { color: '#ffffff', filter: 'original', decoration: 'none', frame: null, stickers: [] };
 function photo(color) {
   const canvas = createCanvas(40, 40);
@@ -58,7 +58,7 @@ test('Three-photo strip becomes a single-photo GIF in source order with faster i
   const originals = [...photos];
   for (const seconds of [0.5, 1, 2]) {
     const updates = [];
-    const blob = await slideshowGif(layout, photos, { ...options, frame: 'invalid-multi-slot-overlay-must-not-load' }, seconds, (done, total) => updates.push([done, total]));
+    const blob = await slideshowGif(layout, photos, options, seconds, (done, total) => updates.push([done, total]));
     assert.equal(blob.type, 'image/gif');
     const buffer = await blob.arrayBuffer();
     const bytes = Buffer.from(buffer);
@@ -79,4 +79,20 @@ test('Three-photo strip becomes a single-photo GIF in source order with faster i
 test('GIF rejects one-photo and incomplete sessions', async () => {
   await assert.rejects(slideshowGif(layouts.find((item) => item.id === 'pol11'), [photo('#000')], options, 0.5));
   await assert.rejects(slideshowGif(layouts[0], [photo('#000'), photo('#fff')], options, 0.5));
+});
+
+test('GIF options omit the template without changing the selected PNG frame or other effects', () => {
+  const selected = { ...options, frame: 'selected-frame.png', filter: 'warm', filterIntensity: 40, filmFx: { grain: 12, vignette: 20, lightLeak: 5 } };
+  const gifOptions = slideshowOptions(selected);
+  assert.equal(gifOptions.frame, null);
+  assert.equal(selected.frame, 'selected-frame.png');
+  assert.deepEqual(gifOptions, { ...selected, frame: null });
+});
+
+test('GIF export ignores selected frame even if it cannot be loaded', async () => {
+  const layout = layouts.find((item) => item.id === 'duo');
+  const photos = [photo('#ff0000'), photo('#0000ff')];
+  const plain = await slideshowGif(layout, photos, options, 0.5);
+  const selected = await slideshowGif(layout, photos, { ...options, frame: 'invalid-frame-must-not-load' }, 0.5);
+  assert.deepEqual(await selected.arrayBuffer(), await plain.arrayBuffer());
 });

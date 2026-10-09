@@ -45,7 +45,9 @@ Akun, moderasi, galeri cloud, dan transfer QR tidak tersedia. GIF berupa slidesh
 ## GIF slideshow
 Di **Hias dan unduh**, pilih interval 0,5/1/2 detik di bawah preview; default 0,5 detik. Pilih format GIF pada bilah bawah untuk melihat preview bergerak, lalu klik Unduh GIF. Hasilnya satu area foto yang menampilkan semua jepretan secara berurutan, dengan sisi panjang maksimal 800 px. Minimal 2 foto diperlukan.
 
-Warna, filter, dekorasi, dan stiker ikut digunakan. Template PNG untuk strip/grid tidak diterapkan ke GIF satu foto karena posisi lubangnya berbeda. PNG tetap menggunakan layout dan template yang dipilih.
+Preview dan hasil GIF tidak memakai template bingkai PNG. Warna, filter, dekorasi, dan stiker tetap digunakan. PNG tetap menggunakan layout dan template yang dipilih.
+
+Kamera menampilkan kilatan putih singkat saat setiap foto diambil, setelah hitung mundur selesai. Kilatan hanya tampil di preview kamera dan tidak masuk ke file foto.
 
 Lihat [panduan GIF](PANDUAN-GIF.md) untuk langkah lengkap dan catatan hosting.
 Stiker bawaan adalah bentuk geometris yang digambar oleh aplikasi, bukan aset karakter pihak ketiga.

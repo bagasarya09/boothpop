@@ -23,5 +23,23 @@
     "name": "Sticker",
     "layoutId": "strip4",
     "src": "/frames/Sticker_Strip4.png"
+  },
+  {
+    "id": "RandomCute_Strip4",
+    "name": "Random Cute",
+    "layoutId": "strip4",
+    "src": "/frames/RandomCute_Strip4.png"
+  },
+  {
+    "id": "Grid4_Maroon_Cute",
+    "name": "Maroon Cute",
+    "layoutId": "grid4",
+    "src": "/frames/Maroon_Cute_Grid4.png"
+  },
+  {
+    "id": "Grid4-1_Maroon_Cute",
+    "name": "Maroon Cute",
+    "layoutId": "wide17",
+    "src": "/frames/Strip4-1_Maroon_Cute.png"
   }
 ]

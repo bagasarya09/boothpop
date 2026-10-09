@@ -1,7 +1,7 @@
 import { donationUrl } from './settings';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { slideshowGif, slideshowLayout } from './slideshow';
+import { slideshowGif, slideshowLayout, slideshowOptions } from './slideshow';
 import { photoFilters, defaultFilmFx, type FilmFx } from './filters';
 
 import { createRoot } from 'react-dom/client';
@@ -51,6 +51,7 @@ function App() {
   const [busy, setBusy] = useState(false);
 
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [captureFlash, setCaptureFlash] = useState(false);
 
   const [pose, setPose] = useState(0);
 
@@ -115,6 +116,7 @@ function App() {
   // Pengelolaan kamera
 
   function stopCamera() {
+    setCaptureFlash(false);
     cameraGeneration.current++;
 
     generation.current++;
@@ -246,6 +248,7 @@ function App() {
     if (captureBusy.current || camera !== 'ready') return;
 
     captureBusy.current = true;
+    setCaptureFlash(false);
 
     setBusy(true);
 
@@ -297,6 +300,11 @@ function App() {
 
         result[index] = c.toDataURL('image/jpeg', 0.9);
         setCaptureShots([...result]);
+        setCaptureFlash(true);
+        // Leave the final shot visible briefly before moving to review, too.
+        await new Promise((resolve) => setTimeout(resolve, 180));
+        if (ticket !== generation.current) return;
+        setCaptureFlash(false);
       }
 
       if (ticket === generation.current) {
@@ -593,9 +601,11 @@ function App() {
     setGifPreview('');
     (async () => {
       const images: string[] = [];
+      const options = slideshowOptions({ color, filter, filterIntensity, filmFx, decoration, frame, stickers });
+      if (!active) return;
       for (const photo of photos) {
         if (!active) return;
-        const canvas = await renderStrip(slideshowLayout, [photo], { color, filter, filterIntensity, filmFx, decoration, frame: null, stickers }, 800);
+        const canvas = await renderStrip(slideshowLayout, [photo], options, 800);
         images.push(canvas.toDataURL('image/png'));
       }
       if (!active) return;
@@ -609,7 +619,7 @@ function App() {
       if (active) setError(t('Preview GIF gagal dibuat. Coba hapus aset terakhir.', 'GIF preview failed. Try removing the last asset.'));
     });
     return () => { active = false; clearInterval(interval); };
-  }, [step, exportFormat, photos, color, filter, filterIntensity, filmFx, decoration, stickers, gifSeconds]);
+  }, [step, exportFormat, layout, photos, color, filter, filterIntensity, filmFx, decoration, frame, stickers, gifSeconds]);
 
   async function exportPhoto() {
     if (exporting) return;
@@ -1300,6 +1310,7 @@ function App() {
                     {countdown}
                   </div>
                 )}
+                {captureFlash && <div className="capture-flash" aria-hidden="true" />}
               </div>
 
               <div className="camera-bottom">
@@ -1342,6 +1353,7 @@ function App() {
                       setBusy(false);
 
                       setCountdown(null);
+                      setCaptureFlash(false);
 
                       setMessage(
                         t(
@@ -1485,7 +1497,7 @@ function App() {
                 <div className="gif-settings">
                   <h3>{t('Slideshow GIF', 'GIF slideshow')}</h3>
                   {photos.length >= 2 ? <>
-                    <p>{t('Satu area foto menampilkan semua jepretan secara bergantian. Warna, filter, dekorasi, dan stiker ikut tersimpan. Template strip/grid hanya digunakan pada PNG.', 'One photo opening displays every shot in sequence. Color, filters, decorations, and stickers are included. Strip/grid templates apply only to PNG.')}</p>
+                    <p>{t('Satu area foto menampilkan semua jepretan secara bergantian tanpa template bingkai. Warna, filter, dekorasi, dan stiker ikut tersimpan. Template bingkai tetap digunakan pada PNG.', 'One photo opening displays every shot in sequence without a frame template. Colors, filters, decorations, and stickers are included. Your frame template still applies to PNG.')}</p>
                     <div className="segmented" role="group" aria-label={t('Interval slideshow GIF', 'GIF slideshow interval')}>
                       {([0.5, 1, 2] as const).map((seconds) => <button key={seconds} disabled={exporting} aria-pressed={gifSeconds === seconds} className={gifSeconds === seconds ? 'active' : ''} onClick={() => setGifSeconds(seconds)}>{lang === 'id' ? String(seconds).replace('.', ',') : seconds} {t('detik', 'seconds')}</button>)}
                     </div>

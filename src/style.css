@@ -671,6 +671,24 @@ footer {
   height: 100%;
   object-fit: cover;
 }
+.capture-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: white;
+  pointer-events: none;
+  animation: capture-flash 180ms ease-out forwards;
+}
+@keyframes capture-flash {
+  from { opacity: 0.85; }
+  to { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .capture-flash {
+    animation: none;
+    opacity: 0.15;
+  }
+}
 .camera-placeholder {
   position: absolute;
   inset: 0;

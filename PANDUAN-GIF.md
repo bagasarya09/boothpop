@@ -8,7 +8,7 @@
 
 Contoh: layout 3 foto menghasilkan GIF satu area foto dengan urutan foto 1 → foto 2 → foto 3 → kembali ke foto 1. Dengan interval 0,5 detik, satu putaran memerlukan 1,5 detik.
 
-GIF menggunakan layout satu foto yang sama untuk semua pilihan strip/grid. Warna, filter, dekorasi, dan stiker tetap digunakan. Template PNG dengan beberapa lubang tidak diterapkan karena tidak sesuai dengan posisi foto GIF. PNG tetap memakai layout, urutan foto, dan template yang dipilih.
+GIF menggunakan layout satu foto yang sama untuk semua pilihan strip/grid, tanpa template bingkai PNG. Warna, filter, dekorasi, dan stiker tetap digunakan. PNG tetap memakai layout, urutan foto, dan template yang dipilih.
 
 GIF memiliki sisi panjang maksimal 800 px dan palet hingga 256 warna per frame. PNG tetap menggunakan resolusi penuh layout. GIF tidak merekam gerakan kamera atau audio dan bukan format Apple Live Photo.
 
