@@ -1,3 +1,5 @@
+import templates from '../public/frames/templates.json' with { type: 'json' };
+
 export const layouts = [
   { id: 'strip4', count: 4, cols: 1, label: ['Strip 4 foto', '4 photo strip'] },
   { id: 'strip3', count: 3, cols: 1, label: ['Strip 3 foto', '3 photo strip'] },
@@ -5,14 +7,8 @@ export const layouts = [
   { id: 'grid4', count: 4, cols: 2, label: ['Grid 4 foto', '4 photo grid'] },
   { id: 'grid6', count: 6, cols: 2, label: ['Grid 6 foto', '6 photo grid'] },
 ];
-export const framePresets = [
-  {
-    id: 'Spider_Strip',
-    name: 'Spider Strip',
-    layoutId: 'pol11',
-    src: '/frames/Spider_Strip.png',
-  },
-];
+// Daftar bingkai publik dikelola di public/frames/templates.json.
+export const framePresets = templates;
 
 const printLayouts = [
   ['mini75', 3, 2.5, 7.5, 'Mini 3', 'Mini 3'],

@@ -1,0 +1,38 @@
+.export-format {
+  display: grid;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.export-format select {
+  min-height: 44px;
+  border: var(--border);
+  border-radius: var(--radius-small);
+  padding: 8px 12px;
+  color: var(--ink);
+  background: var(--white);
+  font: inherit;
+  font-size: 14px;
+}
+.export-format select:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+.gif-settings {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: var(--border);
+}
+.gif-settings h3 { font-size: 16px; }
+.gif-settings p { font-size: 12px; margin: 8px 0 12px; }
+.gif-settings .segmented button { font-size: 13px; padding: 8px 12px; }
+.gif-settings .plain { margin-top: 8px; font-size: 12px; }
+@media (max-width: 640px) {
+  .export-format { gap: 0; }
+  .export-format > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .export-format select { padding: 8px; }
+  .export-actions .primary { padding: 10px; font-size: 12px; }
+  .export-actions { gap: 8px; }
+  .gif-settings .segmented { width: auto; }
+  .gif-settings .segmented button { flex: 0 0 auto; }
+}

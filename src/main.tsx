@@ -1,6 +1,8 @@
 import { donationUrl } from './settings';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { slideshowGif, slideshowLayout } from './slideshow';
+import { photoFilters, defaultFilmFx, type FilmFx } from './filters';
 
 import { createRoot } from 'react-dom/client';
 
@@ -18,6 +20,7 @@ import {
 
 import './style.css';
 import './frame-presets.css';
+import './export.css';
 
 type FramePreset = { id: string; name: string; layoutId: string; src: string };
 
@@ -31,10 +34,13 @@ function App() {
   const [step, setStep] = useState(0);
 
   const [layout, setLayout] = useState<Layout>(layouts[0]);
+  const [layoutGroup, setLayoutGroup] = useState(layouts[0].count);
+  const layoutCounts = [...new Set(layouts.map((item) => item.count))].sort((a, b) => a - b);
 
   const [timer, setTimer] = useState(3);
 
   const [photos, setPhotos] = useState<string[]>([]);
+  const [captureShots, setCaptureShots] = useState<string[]>([]);
 
   const [camera, setCamera] = useState<'idle' | 'loading' | 'ready' | 'error'>(
     'idle',
@@ -53,6 +59,8 @@ function App() {
   const [color, setColor] = useState('#FFFFFF');
 
   const [filter, setFilter] = useState('original');
+  const [filterIntensity, setFilterIntensity] = useState(100);
+  const [filmFx, setFilmFx] = useState<FilmFx>({ ...defaultFilmFx });
 
   const [decoration, setDecoration] = useState('none');
 
@@ -67,6 +75,10 @@ function App() {
   const [preview, setPreview] = useState('');
 
   const [exporting, setExporting] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'png' | 'gif'>('png');
+  const [gifSeconds, setGifSeconds] = useState<0.5 | 1 | 2>(0.5);
+  const [gifProgress, setGifProgress] = useState('');
+  const [gifPreview, setGifPreview] = useState('');
 
   const [message, setMessage] = useState('');
 
@@ -89,6 +101,9 @@ function App() {
   const g = geometry(layout);
   const availableFrames = framePresets.filter(
     (preset) => preset.layoutId === layout.id,
+  );
+  const layoutsWithFrames = layouts.filter((candidate) =>
+    framePresets.some((preset) => preset.layoutId === candidate.id),
   );
   const [loadingPreset, setLoadingPreset] = useState<string | null>(null);
   const frameRequest = useRef(0);
@@ -209,6 +224,7 @@ function App() {
 
   function goCamera(index: number | null = null) {
     setRetake(index);
+    setCaptureShots(index === null ? [] : photos.map((photo, slot) => slot === index ? '' : photo));
 
     setPose(index ?? 0);
 
@@ -237,7 +253,8 @@ function App() {
 
     const ticket = ++generation.current;
 
-    const result = [...photos];
+    const result = retake !== null ? [...photos] : Array<string>(layout.count).fill('');
+    setCaptureShots(retake !== null ? result.map((photo, slot) => slot === retake ? '' : photo) : []);
 
     try {
       const indices =
@@ -279,6 +296,7 @@ function App() {
         x.drawImage(v, 0, 0, c.width, c.height);
 
         result[index] = c.toDataURL('image/jpeg', 0.9);
+        setCaptureShots([...result]);
       }
 
       if (ticket === generation.current) {
@@ -406,7 +424,9 @@ function App() {
           g.width +
           ' × ' +
           g.height +
-          ' px.',
+          ' px. ' +
+          t('Ukuran gambar terbaca: ', 'Detected image size: ') +
+          img.width + ' × ' + img.height + ' px.',
       );
 
     const c = document.createElement('canvas');
@@ -445,10 +465,12 @@ function App() {
     setError('');
     setMessage('');
     try {
-      const img = await loadImage(preset.src);
+      // Reload a replacement PNG even when the same template URL was used earlier.
+      const source = preset.src + (preset.src.includes('?') ? '&' : '?') + 'v=' + Date.now();
+      const img = await loadImage(source);
       if (request !== frameRequest.current) return;
       validateFrame(img);
-      setFrame(preset.src);
+      setFrame(source);
       setMessage(
         t(
           'Bingkai diterapkan. Periksa area foto pada preview.',
@@ -479,8 +501,8 @@ function App() {
     kind: 'frame' | 'sticker',
   ) {
     if (!file) return;
+    const request = kind === 'frame' ? ++frameRequest.current : null;
     if (kind === 'frame') {
-      frameRequest.current += 1;
       setLoadingPreset(null);
     }
 
@@ -496,6 +518,7 @@ function App() {
       );
 
       if (kind === 'frame') {
+        if (request !== frameRequest.current) return;
         validateFrame(img);
 
         setFrame(src);
@@ -526,6 +549,7 @@ function App() {
         setSelected(id);
       }
     } catch (e) {
+      if (kind === 'frame' && request !== frameRequest.current) return;
       setError((e as Error).message);
     }
   }
@@ -539,7 +563,7 @@ function App() {
 
     setError('');
 
-    renderStrip(layout, photos, { color, filter, decoration, frame, stickers })
+    renderStrip(layout, photos, { color, filter, filterIntensity, filmFx, decoration, frame, stickers })
       .then((c) => {
         if (active && ticket === previewGeneration.current)
           setPreview(c.toDataURL('image/png'));
@@ -559,35 +583,64 @@ function App() {
     return () => {
       active = false;
     };
-  }, [step, layout, photos, color, filter, decoration, frame, stickers, lang]);
+  }, [step, layout, photos, color, filter, filterIntensity, filmFx, decoration, frame, stickers, lang]);
 
   // Ekspor hasil dan template bingkai
+  useEffect(() => {
+    if (step !== 4 || exportFormat !== 'gif' || photos.length < 2) return;
+    let active = true;
+    let interval: ReturnType<typeof setInterval> | undefined;
+    setGifPreview('');
+    (async () => {
+      const images: string[] = [];
+      for (const photo of photos) {
+        if (!active) return;
+        const canvas = await renderStrip(slideshowLayout, [photo], { color, filter, filterIntensity, filmFx, decoration, frame: null, stickers }, 800);
+        images.push(canvas.toDataURL('image/png'));
+      }
+      if (!active) return;
+      let index = 0;
+      setGifPreview(images[0]);
+      interval = setInterval(() => {
+        index = (index + 1) % images.length;
+        setGifPreview(images[index]);
+      }, gifSeconds * 1000);
+    })().catch(() => {
+      if (active) setError(t('Preview GIF gagal dibuat. Coba hapus aset terakhir.', 'GIF preview failed. Try removing the last asset.'));
+    });
+    return () => { active = false; clearInterval(interval); };
+  }, [step, exportFormat, photos, color, filter, filterIntensity, filmFx, decoration, stickers, gifSeconds]);
 
   async function exportPhoto() {
+    if (exporting) return;
     setExporting(true);
 
     setError('');
 
     try {
-      const c = await renderStrip(layout, photos, {
+      const options = {
         color,
 
         filter,
+        filterIntensity,
+        filmFx,
 
         decoration,
 
         frame,
 
         stickers,
-      });
-
-      downloadBlob(await canvasBlob(c), 'boothpop-' + layout.id + '.png');
+      };
+      const blob = exportFormat === 'gif'
+        ? await slideshowGif(layout, photos, options, gifSeconds, (done, total) => setGifProgress(`${done}/${total}`))
+        : await canvasBlob(await renderStrip(layout, photos, options));
+      downloadBlob(blob, 'boothpop-' + layout.id + '.' + exportFormat);
 
       setMessage(
         t(
-          'File PNG siap. Jika gambar terbuka di tab baru, tekan lama untuk menyimpannya.',
+          'File siap. Jika gambar terbuka di tab baru, tekan lama untuk menyimpannya.',
 
-          'PNG ready. If the image opens in a new tab, long-press to save it.',
+          'File ready. If the image opens in a new tab, long-press to save it.',
         ),
       );
     } catch {
@@ -600,8 +653,10 @@ function App() {
       );
     } finally {
       setExporting(false);
+      setGifProgress('');
     }
   }
+
 
   async function template(guide: boolean) {
     try {
@@ -632,15 +687,22 @@ function App() {
 
     stopCamera();
 
+    frameRequest.current += 1;
+    setLoadingPreset(null);
+
     setPhotos([]);
+    setCaptureShots([]);
 
     setStickers([]);
 
     setFrame(null);
 
     setPreview('');
+    setExportFormat('png');
 
     setFilter('original');
+    setFilterIntensity(100);
+    setFilmFx({ ...defaultFilmFx });
 
     setDecoration('none');
 
@@ -655,6 +717,8 @@ function App() {
     if (!info) return;
 
     const previous = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setInfo(null);
@@ -684,6 +748,7 @@ function App() {
 
     return () => {
       document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
 
       previous?.focus();
     };
@@ -692,6 +757,9 @@ function App() {
   // Pengaturan stiker dan navigasi tahapan
 
   const activeSticker = stickers.find((s) => s.id === selected);
+  useEffect(() => {
+    if (photos.length < 2) setExportFormat('png');
+  }, [photos.length]);
 
   function updateSticker(key: 'x' | 'y' | 'size' | 'rotation', value: number) {
     setStickers((old) =>
@@ -712,7 +780,7 @@ function App() {
   // Tampilan aplikasi
 
   return (
-    <div className="app">
+    <div className={'app' + (step === 4 ? ' app-editing' : '')}>
       <header>
         <button
           className="wordmark"
@@ -977,8 +1045,26 @@ function App() {
 
           {step === 1 && (
             <>
+              <div className="layout-group-picker">
+                <h3>{t('Jumlah foto', 'Number of photos')}</h3>
+                <div className="segmented" role="group" aria-label={t('Kelompok layout berdasarkan jumlah foto', 'Layout groups by photo count')}>
+                  {layoutCounts.map((count) => (
+                    <button
+                      key={count}
+                      type="button"
+                      disabled={busy}
+                      aria-pressed={layoutGroup === count}
+                      className={layoutGroup === count ? 'active' : ''}
+                      onClick={() => setLayoutGroup(count)}
+                    >
+                      {count} {t('foto', count === 1 ? 'photo' : 'photos')}
+                    </button>
+                  ))}
+                </div>
+                <p>{t('Layout terpilih: ', 'Selected layout: ')}<strong>{layout.label[lang === 'id' ? 0 : 1]}</strong> · {layout.count} {t('foto', 'photos')}</p>
+              </div>
               <div className="layout-grid">
-                {layouts.map((l: Layout) => (
+                {layouts.filter((candidate) => candidate.count === layoutGroup).map((l: Layout) => (
                   <button
                     className={
                       'layout-card ' + (layout.id === l.id ? 'chosen' : '')
@@ -987,6 +1073,7 @@ function App() {
                     key={l.id}
 
                     aria-pressed={layout.id === l.id}
+                    disabled={busy}
 
                     onClick={() => {
                       if (
@@ -1048,6 +1135,12 @@ function App() {
                           ? t('Vertikal', 'Vertical')
                           : t('Dua kolom', 'Two columns'))}
                     </small>
+
+                    {framePresets.some((preset) => preset.layoutId === l.id) && (
+                      <small className="layout-template-badge">
+                        {t('Ada template bingkai', 'Frame templates available')}
+                      </small>
+                    )}
 
                     <span className="check">
                       {layout.id === l.id ? '✓' : '+'}
@@ -1133,6 +1226,17 @@ function App() {
           )}
 
           {step === 2 && (
+            <div className={'camera-workspace' + (layout.count === 1 ? ' camera-workspace-single' : '')}>
+              {layout.count > 1 && (
+                <aside className="capture-results capture-results-left" aria-label={t('Hasil foto sisi kiri', 'Captured photos on the left')}>
+                  {Array.from({ length: layout.count }, (_, index) => index).filter((index) => index % 2 === 0).map((index) => (
+                    <figure className={'capture-shot card' + (busy && pose === index ? ' capture-shot-current' : '')} key={index}>
+                      {captureShots[index] ? <img src={captureShots[index]} alt={t('Hasil foto ' + (index + 1), 'Captured photo ' + (index + 1))} /> : <div className="capture-shot-placeholder" aria-hidden="true">{index + 1}</div>}
+                      <figcaption>{t('Foto ', 'Photo ')}{index + 1}{captureShots[index] ? ' ✓' : ''}</figcaption>
+                    </figure>
+                  ))}
+                </aside>
+              )}
             <section className="camera-panel card">
               <div className="camera-top">
                 <span className={'pill ' + (camera === 'ready' ? 'mint' : '')}>
@@ -1253,6 +1357,17 @@ function App() {
                 )}
               </div>
             </section>
+              {layout.count > 1 && (
+                <aside className="capture-results capture-results-right" aria-label={t('Hasil foto sisi kanan', 'Captured photos on the right')}>
+                  {Array.from({ length: layout.count }, (_, index) => index).filter((index) => index % 2 === 1).map((index) => (
+                    <figure className={'capture-shot card' + (busy && pose === index ? ' capture-shot-current' : '')} key={index}>
+                      {captureShots[index] ? <img src={captureShots[index]} alt={t('Hasil foto ' + (index + 1), 'Captured photo ' + (index + 1))} /> : <div className="capture-shot-placeholder" aria-hidden="true">{index + 1}</div>}
+                      <figcaption>{t('Foto ', 'Photo ')}{index + 1}{captureShots[index] ? ' ✓' : ''}</figcaption>
+                    </figure>
+                  ))}
+                </aside>
+              )}
+            </div>
           )}
 
           {step === 3 && (
@@ -1316,29 +1431,39 @@ function App() {
                   </span>
 
                   <span>
-                    {layout.printSize ? layout.printSize + ' · ' : ''}
-                    {g.width} × {g.height} px
+                    {exportFormat === 'gif' ? t('GIF · satu foto bergantian', 'GIF · one photo at a time') : <>{layout.printSize ? layout.printSize + ' · ' : ''}{g.width} × {g.height} px</>}
                   </span>
                 </div>
 
-                {preview ? (
+                {(exportFormat === 'gif' ? gifPreview : preview) ? (
+                  <div
+                    className="preview-stage"
+                  >
                   <img
-                    className="strip-preview"
+                    className={'strip-preview' + (exportFormat === 'png' && g.height / g.width > 1.8 ? ' strip-preview-tall' : '')}
 
-                    src={preview}
+                    src={exportFormat === 'gif' ? gifPreview : preview}
 
                     alt={t(
-                      'Preview photo strip Anda',
-                      'Your photo strip preview',
+                      'Preview hasil foto Anda',
+                      'Your photo result preview',
                     )}
                   />
+                  </div>
                 ) : (
                   <p role="status">
                     {t('Membuat preview…', 'Preparing preview…')}
                   </p>
                 )}
+                <button
+                  className="preview-detail-button"
+                  disabled={!(exportFormat === 'gif' ? gifPreview : preview)}
+                  onClick={() => setInfo('preview')}
+                >
+                  {t('Lihat detail foto', 'View photo details')} ↗
+                </button>
 
-                {layout.printSize && (
+                {layout.printSize && exportFormat === 'png' && (
                   <p className="helper">
                     {t('Ukuran cetak referensi: ', 'Reference print size: ')}
                     {layout.printSize}.{' '}
@@ -1357,6 +1482,16 @@ function App() {
                     'Preview updates with your settings.',
                   )}
                 </p>
+                <div className="gif-settings">
+                  <h3>{t('Slideshow GIF', 'GIF slideshow')}</h3>
+                  {photos.length >= 2 ? <>
+                    <p>{t('Satu area foto menampilkan semua jepretan secara bergantian. Warna, filter, dekorasi, dan stiker ikut tersimpan. Template strip/grid hanya digunakan pada PNG.', 'One photo opening displays every shot in sequence. Color, filters, decorations, and stickers are included. Strip/grid templates apply only to PNG.')}</p>
+                    <div className="segmented" role="group" aria-label={t('Interval slideshow GIF', 'GIF slideshow interval')}>
+                      {([0.5, 1, 2] as const).map((seconds) => <button key={seconds} disabled={exporting} aria-pressed={gifSeconds === seconds} className={gifSeconds === seconds ? 'active' : ''} onClick={() => setGifSeconds(seconds)}>{lang === 'id' ? String(seconds).replace('.', ',') : seconds} {t('detik', 'seconds')}</button>)}
+                    </div>
+                  </> : <p>{t('GIF slideshow memerlukan minimal 2 foto. Layout ini tetap bisa diunduh sebagai PNG.', 'GIF slideshow needs at least 2 photos. This layout can still be downloaded as PNG.')}</p>}
+                  <button className="plain" disabled={exporting} onClick={startOver}>{t('Mulai sesi baru', 'Start a new session')} ↻</button>
+                </div>
               </section>
 
               <section className="controls card">
@@ -1386,7 +1521,66 @@ function App() {
 
                 {tab === 'frame' && (
                   <div className="control-body" role="tabpanel">
+                    <h3>{t('Template bingkai', 'Frame templates')}</h3>
+                    <p>
+                      {t(
+                        'Pilih desain siap pakai untuk layout Anda. Template langsung diterapkan ke preview dan hasil unduhan.',
+                        'Choose a ready-made design for your layout. Templates apply to both the preview and download.',
+                      )}
+                    </p>
+                    <div className="frame-preset-grid">
+                      <button
+                        type="button"
+                        className={'frame-preset-card' + (!frame ? ' selected' : '')}
+                        aria-pressed={!frame}
+                        onClick={() => {
+                          frameRequest.current += 1;
+                          setLoadingPreset(null);
+                          setFrame(null);
+                        }}
+                      >
+                        <div className="frame-preset-plain" aria-hidden="true">
+                          <span>▣</span>
+                        </div>
+                        <span>{t('Bingkai polos', 'Plain frame')}</span>
+                        <small>{!frame ? t('✓ Dipilih', '✓ Selected') : t('Pilih bingkai', 'Select frame')}</small>
+                      </button>
+                      {availableFrames.map((preset: FramePreset) => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          className={'frame-preset-card' + (frame?.split('?')[0] === preset.src ? ' selected' : '')}
+                          aria-pressed={frame?.split('?')[0] === preset.src}
+                          disabled={loadingPreset !== null}
+                          onClick={() => selectPreset(preset)}
+                        >
+                          <img src={preset.src} alt={preset.name} loading="lazy" />
+                          <span>{preset.name}</span>
+                          <small>
+                            {loadingPreset === preset.id
+                              ? t('Memuat…', 'Loading…')
+                              : frame?.split('?')[0] === preset.src
+                                ? t('✓ Dipilih', '✓ Selected')
+                                : t('Pilih bingkai', 'Select frame')}
+                          </small>
+                        </button>
+                      ))}
+                    </div>
+                    {availableFrames.length === 0 && (
+                      <p className="frame-preset-empty">
+                        {t('Belum ada template untuk layout ini.', 'No templates for this layout yet.')}
+                        {layoutsWithFrames.length > 0 && (
+                          <> {' '}{t('Template tersedia untuk: ', 'Templates available for: ')}
+                            {layoutsWithFrames.map((candidate) => candidate.label[lang === 'id' ? 0 : 1]).join(', ')}.
+                          </>
+                        )}
+                      </p>
+                    )}
+                    <hr />
                     <h3>{t('Warna bingkai', 'Frame color')}</h3>
+                    {frame && (
+                      <p>{t('Warna mengisi bagian transparan di luar foto. Pilih Bingkai polos untuk menggunakan warna tanpa desain.', 'Color fills transparent areas outside the photos. Choose Plain frame to use color without a design.')}</p>
+                    )}
 
                     <div className="swatches">
                       {[
@@ -1438,55 +1632,9 @@ function App() {
                       <code>{color}</code>
                     </label>
 
-                    <hr />
-
-                    <h3>{t('Pilihan desain bingkai', 'Frame designs')}</h3>
-                    <p>
-                      {t(
-                        'Desain yang cocok dengan layout pilihan Anda.',
-                        'Designs compatible with your selected layout.',
-                      )}
-                    </p>
-                    {availableFrames.length > 0 ? (
-                      <div className="frame-preset-grid">
-                        {availableFrames.map((preset: FramePreset) => (
-                          <button
-                            key={preset.id}
-                            type="button"
-                            className={
-                              'frame-preset-card' +
-                              (frame === preset.src ? ' selected' : '')
-                            }
-                            aria-pressed={frame === preset.src}
-                            disabled={loadingPreset !== null}
-                            onClick={() => selectPreset(preset)}
-                          >
-                            <img
-                              src={preset.src}
-                              alt={preset.name}
-                              loading="lazy"
-                            />
-                            <span>{preset.name}</span>
-                            <small>
-                              {loadingPreset === preset.id
-                                ? t('Memuat…', 'Loading…')
-                                : frame === preset.src
-                                  ? t('✓ Dipilih', '✓ Selected')
-                                  : t('Pilih bingkai', 'Select frame')}
-                            </small>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="frame-preset-empty">
-                        {t(
-                          'Belum ada desain bawaan untuk layout ini. Spider Strip tersedia pada layout Strip 3 persegi.',
-                          'No presets for this layout yet. Spider Strip is available with the 3 square strip layout.',
-                        )}
-                      </p>
-                    )}
-                    <hr />
-                    <h3>{t('Bingkai buatan Anda', 'Your custom frame')}</h3>
+                    <details className="custom-frame-tools">
+                    <summary>{t('Bingkai buatan Anda', 'Your custom frame')}</summary>
+                    <div className="custom-frame-body">
 
                     <p>
                       {t(
@@ -1507,8 +1655,9 @@ function App() {
                         'Keep photo openings transparent. Do not change canvas dimensions or photo opening positions.',
                       )}
                     </p>
+                    <p>{t('Upload di sini hanya berlaku untuk sesi Anda.', 'Uploads here apply only to your session.')}</p>
 
-                    <div className="stack">
+                    <div className="custom-frame-actions">
                       <button onClick={() => template(false)}>
                         {t(
                           '↓ Unduh template bingkai',
@@ -1552,6 +1701,8 @@ function App() {
                         </button>
                       )}
                     </div>
+                    </div>
+                    </details>
                   </div>
                 )}
 
@@ -1567,14 +1718,8 @@ function App() {
                       )}
                     </p>
 
-                    <div className="stack">
-                      {[
-                        ['original', t('Original', 'Original')],
-
-                        ['bw', t('Hitam putih', 'Black & white')],
-
-                        ['sepia', 'Sepia'],
-                      ].map(([key, name]) => (
+                    <div className="filter-options">
+                      {photoFilters.map(({ id: key, name }) => (
                         <button
                           className={filter === key ? 'mint' : ''}
 
@@ -1588,6 +1733,33 @@ function App() {
                         </button>
                       ))}
                     </div>
+                    <p className="filter-description" role="status">
+                      {photoFilters.find((item) => item.id === filter)?.description[lang === 'id' ? 0 : 1]}
+                    </p>
+                    <label className="slider" htmlFor="filter-intensity">
+                      <span>{t('Intensitas filter', 'Filter intensity')}</span>
+                      <output htmlFor="filter-intensity">{filterIntensity}%</output>
+                      <input id="filter-intensity" type="range" min="0" max="100" step="1" value={filterIntensity} disabled={filter === 'original' || exporting} aria-valuetext={filterIntensity + '%'} onChange={(event) => setFilterIntensity(Number(event.target.value))} />
+                    </label>
+                    <p className="helper">{filter === 'original'
+                      ? t('Pilih filter untuk mengatur intensitas. Film FX tetap dapat digunakan pada Original.', 'Choose a filter to adjust its intensity. Film FX can still be used with Original.')
+                      : t('0% menggunakan warna asli; 100% menggunakan efek penuh. Film FX diatur secara terpisah.', '0% uses original colors; 100% applies the full filter. Film FX is controlled separately.')}</p>
+                    <details className="custom-frame-tools film-fx-tools">
+                      <summary>Film FX</summary>
+                      <div className="custom-frame-body">
+                        <p>{t('Tambahkan tekstur film, tepi gelap, atau cahaya hangat dari sisi kiri. Bisa dipakai dengan semua filter.', 'Add film texture, dark edges, or warm light from the left. Works with every filter.')}</p>
+                        {filter === 'film' && <p className="helper">{t('Preset Film sudah memiliki grain dan vignette halus. Slider ini menambahkan efek di atas preset tersebut.', 'The Film preset already includes subtle grain and vignette. These sliders add effects on top of that preset.')}</p>}
+                        {([
+                          ['grain', t('Grain', 'Grain')],
+                          ['vignette', t('Vignette', 'Vignette')],
+                          ['lightLeak', t('Bocoran cahaya', 'Light leak')],
+                        ] as const).map(([key, label]) => <label className="slider" key={key} htmlFor={'fx-' + key}>
+                          <span>{label}</span><output htmlFor={'fx-' + key}>{filmFx[key]}%</output>
+                          <input id={'fx-' + key} type="range" min="0" max="100" step="1" value={filmFx[key]} disabled={exporting} aria-valuetext={filmFx[key] + '%'} onChange={(event) => setFilmFx((previous) => ({ ...previous, [key]: Number(event.target.value) }))} />
+                        </label>)}
+                        <button type="button" disabled={exporting || Object.values(filmFx).every((value) => value === 0)} onClick={() => setFilmFx({ ...defaultFilmFx })}>{t('Reset Film FX', 'Reset Film FX')}</button>
+                      </div>
+                    </details>
                   </div>
                 )}
 
@@ -1754,7 +1926,19 @@ function App() {
                   </div>
                 )}
 
-                <div className="export-actions">
+              </section>
+                <div className="export-actions" role="region" aria-label={t('Simpan hasil foto', 'Save photo results')}>
+                  <div className="export-actions-copy">
+                    <strong>{t('Sudah cocok dengan hasilnya?', 'Happy with your photos?')}</strong>
+                    <span>{t('Simpan sebelum memulai sesi baru.', 'Save before starting a new session.')}</span>
+                  </div>
+                  <label className="export-format">
+                    <span>{t('Format', 'Format')}</span>
+                    <select value={exportFormat} disabled={exporting} onChange={(event) => setExportFormat(event.target.value as 'png' | 'gif')}>
+                      <option value="png">PNG</option>
+                      <option value="gif" disabled={photos.length < 2}>GIF</option>
+                    </select>
+                  </label>
                   <button
                     className="primary"
 
@@ -1763,15 +1947,11 @@ function App() {
                     onClick={exportPhoto}
                   >
                     {exporting
-                      ? t('Menyiapkan PNG…', 'Preparing PNG…')
-                      : t('↓ Unduh photo strip', '↓ Download photo strip')}
+                      ? t('Menyiapkan… ', 'Preparing… ') + gifProgress
+                      : t('↓ Unduh ', '↓ Download ') + exportFormat.toUpperCase()}
                   </button>
 
-                  <button disabled={exporting} onClick={startOver}>
-                    {t('Mulai sesi baru', 'Start a new session')} ↻
-                  </button>
                 </div>
-              </section>
             </div>
           )}
 
@@ -1820,14 +2000,14 @@ function App() {
       {info && (
         <div className="modal-overlay" onClick={() => setInfo(null)}>
           <section
-            className="card modal"
+            className={'card modal' + (info === 'preview' ? ' preview-detail-modal' : '')}
 
             role="dialog"
 
             aria-modal="true"
 
             aria-label={
-              info === 'help'
+              info === 'preview' ? t('Detail foto', 'Photo details') : info === 'help'
                 ? t('Cara pakai', 'How it works')
                 : t('Privasi foto', 'Photo privacy')
             }
@@ -1847,12 +2027,18 @@ function App() {
             </button>
 
             <h2>
-              {info === 'help'
+              {info === 'preview' ? t('Detail foto', 'Photo details') : info === 'help'
                 ? t('Dari pose ke kenangan.', 'From poses to memories.')
                 : t('Foto Anda, perangkat Anda.', 'Your photos, your device.')}
             </h2>
 
-            {info === 'help' ? (
+            {info === 'preview' ? (
+              <img
+                className="preview-detail-image"
+                src={exportFormat === 'gif' ? gifPreview : preview}
+                alt={t('Detail hasil foto Anda', 'Detailed view of your photo result')}
+              />
+            ) : info === 'help' ? (
               <ol>
                 <li>
                   {t('Pilih layout dan timer.', 'Choose a layout and timer.')}
@@ -1902,7 +2088,7 @@ function App() {
             )}
 
             <button className="primary" onClick={() => setInfo(null)}>
-              {t('Mengerti', 'Got it')}
+              {info === 'preview' ? t('Tutup detail', 'Close details') : t('Mengerti', 'Got it')}
             </button>
           </section>
         </div>

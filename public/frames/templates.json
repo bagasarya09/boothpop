@@ -1,0 +1,27 @@
+[
+  {
+    "id": "Spider_Strip",
+    "name": "Spider Strip",
+    "layoutId": "pol11",
+    "src": "/frames/Spider_Strip.png"
+  },
+
+  {
+    "id": "MaroonCute_Strip4",
+    "name": "Maroon Cute",
+    "layoutId": "strip4",
+    "src": "/frames/Maroon_Cute_Strip4.png"
+  },
+  {
+    "id": "BlueCute_Strip4",
+    "name": "Blue Cute",
+    "layoutId": "strip4",
+    "src": "/frames/Blue_Cute_Strip4.png"
+  },
+  {
+    "id": "Sticker_Strip4",
+    "name": "Sticker",
+    "layoutId": "strip4",
+    "src": "/frames/Sticker_Strip4.png"
+  }
+]

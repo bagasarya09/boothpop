@@ -458,6 +458,20 @@ footer {
   grid-template-columns: repeat(5, 1fr);
   gap: 16px;
 }
+.layout-group-picker {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.layout-group-picker p {
+  font-size: 14px;
+}
+.layout-group-picker .segmented {
+  width: auto;
+}
+.layout-group-picker .segmented button {
+  flex: 0 0 auto;
+}
 .layout-card {
   position: relative;
   display: flex;
@@ -573,6 +587,65 @@ footer {
   margin: auto;
   padding: 24px;
 }
+.camera-workspace {
+  display: grid;
+  grid-template-columns: minmax(100px, 160px) minmax(0, 1fr) minmax(100px, 160px);
+  grid-template-areas: "left camera right";
+  gap: 20px;
+  align-items: center;
+}
+.camera-workspace-single {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "camera";
+}
+.camera-workspace .camera-panel {
+  grid-area: camera;
+  width: 100%;
+  min-width: 0;
+}
+.capture-results {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.capture-results-left { grid-area: left; }
+.capture-results-right { grid-area: right; }
+.capture-shot {
+  margin: 0;
+  padding: 8px;
+  border-radius: 12px;
+}
+.capture-shot-current { background: var(--yellow); }
+.capture-shot img,
+.capture-shot-placeholder {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--ink);
+  border-radius: 6px;
+}
+.capture-shot-placeholder {
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+  color: var(--secondary);
+  font-size: 28px;
+  font-weight: 700;
+}
+.capture-shot figcaption {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+@media (max-width: 900px) and (min-width: 641px) {
+  .camera-workspace {
+    grid-template-columns: 100px minmax(0, 1fr) 100px;
+    gap: 12px;
+  }
+  .camera-workspace-single { grid-template-columns: minmax(0, 1fr); }
+  .camera-workspace .camera-panel { padding: 16px; }
+}
 .camera-top,
 .camera-bottom {
   display: flex;
@@ -660,11 +733,12 @@ footer {
 }
 .editor {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 32px;
   align-items: start;
 }
 .preview-panel {
+  min-width: 0;
   padding: 24px;
   background: var(--mint);
 }
@@ -675,14 +749,39 @@ footer {
   gap: 12px;
   font-size: 11px;
 }
+.preview-stage {
+  margin-top: 24px;
+  padding: 8px;
+  border-radius: 8px;
+}
 .strip-preview {
-  max-height: 670px;
+  max-height: 760px;
   width: auto;
+  height: auto;
   max-width: 100%;
   object-fit: contain;
-  margin: 24px auto 0;
+  margin: 0 auto;
   border: var(--border);
   box-shadow: var(--shadow-m);
+}
+.strip-preview-tall {
+  max-width: min(100%, 360px);
+}
+.preview-detail-button {
+  display: flex;
+  margin: 20px auto 0;
+  font-size: 14px;
+}
+.modal.preview-detail-modal {
+  width: 100%;
+  max-width: 880px;
+}
+.preview-detail-image {
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  margin: 0 auto 24px;
+  border: var(--border);
 }
 .preview-panel > .helper {
   text-align: center;
@@ -764,13 +863,86 @@ hr {
   flex-direction: column;
   gap: 12px;
 }
+.filter-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.filter-options button {
+  padding: 12px;
+  font-size: 14px;
+}
+.control-body .filter-description {
+  margin: 20px 0 0;
+  font-size: 13px;
+}
 .export-actions {
-  padding: 24px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  padding: 16px max(24px, calc((100vw - 1240px) / 2)) calc(16px + env(safe-area-inset-bottom));
   border-top: var(--border);
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
   gap: 12px;
   background: var(--paper);
+  box-shadow: 0 -4px 0 rgba(17, 17, 17, 0.06);
+}
+.export-actions-copy {
+  display: grid;
+  gap: 4px;
+  margin-right: auto;
+  font-size: 14px;
+}
+.export-actions-copy span {
+  font-size: 12px;
+  color: var(--secondary);
+}
+.app-editing {
+  padding-bottom: calc(112px + env(safe-area-inset-bottom));
+}
+.app-editing .toast {
+  bottom: calc(112px + env(safe-area-inset-bottom));
+}
+.custom-frame-tools {
+  margin-top: 24px;
+  border: var(--border);
+  border-radius: var(--radius-small);
+}
+.custom-frame-tools summary {
+  cursor: pointer;
+  padding: 16px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.custom-frame-tools summary:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 4px;
+}
+.custom-frame-body {
+  padding: 0 16px 16px;
+}
+.custom-frame-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.custom-frame-actions button,
+.custom-frame-actions .button {
+  padding: 10px;
+  font-size: 12px;
+}
+.custom-frame-actions .primary {
+  grid-column: 1 / -1;
+}
+@media (min-width: 641px) {
+  .app-editing .preview-panel {
+    position: sticky;
+    top: 24px;
+  }
 }
 .sticker-list {
   display: flex;
@@ -1037,6 +1209,17 @@ hr {
   .camera-panel {
     padding: 12px;
   }
+  .camera-workspace {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: "camera camera" "left right";
+    gap: 16px;
+    align-items: start;
+  }
+  .camera-workspace-single {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "camera";
+  }
+  .capture-results { gap: 12px; }
   .camera-top {
     font-size: 11px;
     gap: 8px;
@@ -1087,9 +1270,12 @@ hr {
   .preview-panel {
     padding: 16px;
   }
-  .strip-preview {
-    max-height: 450px;
+  .preview-stage {
     margin-top: 16px;
+    padding: 6px;
+  }
+  .strip-preview {
+    max-height: 680px;
   }
   .control-body {
     padding: 20px;
@@ -1098,7 +1284,27 @@ hr {
     font-size: 10px;
   }
   .export-actions {
-    padding: 20px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+  .export-actions-copy {
+    display: none;
+  }
+  .export-actions .primary {
+    flex: 1;
+    padding: 12px;
+    font-size: 13px;
+  }
+  .export-new-session {
+    padding: 12px;
+    font-size: 12px;
+    box-shadow: none;
+  }
+  .app-editing {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+  .app-editing .toast {
+    bottom: calc(96px + env(safe-area-inset-bottom));
   }
   .toast {
     left: 16px;
