@@ -3,7 +3,7 @@ import { applyPhotoFilter, type FilmFx } from './filters';
 export type Layout={id:string;count:number;cols:number;label:string[];printSize?:string;cmW?:number;cmH?:number};
 export type Sticker={id:string;src:string;x:number;y:number;size:number;rotation:number};
 export type Options={color:string;filter:string;filterIntensity?:number;filmFx?:FilmFx;decoration:string;frame:string|null;stickers:Sticker[]};
-export const loadImage=(src:string)=>new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('Image decode failed'));img.src=src;});
+export const loadImage=(src:string)=>new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.crossOrigin='anonymous';img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('Image decode failed'));img.src=src;});
 export function canvasBlob(canvas:HTMLCanvasElement){return new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('PNG export failed')),'image/png'));}
 export function downloadBlob(blob:Blob,name:string){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
 function filteredImage(img:HTMLImageElement,w:number,h:number,options:Options){

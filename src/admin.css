@@ -1,0 +1,55 @@
+.admin-main { padding: 32px 0 64px; }
+.admin-brand { text-decoration: none; flex-wrap: wrap; }
+.admin-login { max-width: 460px; margin: 32px auto; padding: 32px; display: grid; gap: 20px; }
+.admin-login h2, .admin-form h2 { font-size: 28px; }
+.admin-app label { display: grid; gap: 8px; font-size: 14px; font-weight: 700; }
+.admin-app input:not([type="file"]):not([type="checkbox"]), .admin-app select {
+  width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; background: var(--white); color: var(--ink); border: var(--border); border-radius: 8px; font: inherit;
+}
+.admin-app select:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.admin-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 16px 0 24px; }
+.admin-summary > span { font-weight: 800; }
+.admin-summary small { color: var(--secondary); overflow-wrap: anywhere; }
+.admin-summary button { margin-left: auto; }
+.admin-workspace { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 32px; align-items: start; }
+.admin-form { display: grid; gap: 18px; padding: 24px; min-width: 0; scroll-margin-top: 24px; }
+.admin-form .helper { margin: 0; }
+.admin-app .admin-checkbox { display: flex; align-items: center; gap: 12px; }
+.admin-checkbox input { width: 22px; height: 22px; accent-color: var(--ink); flex-shrink: 0; }
+.admin-file-preview { display: grid; gap: 10px; text-align: center; }
+.admin-file-preview img, .admin-template > img { width: 100%; object-fit: contain; background: repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 16px 16px; border-radius: 8px; }
+.admin-file-preview img { height: 300px; }
+.admin-file-preview small { color: var(--secondary); font-size: 12px; }
+.admin-search { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-bottom: 24px; }
+.admin-template-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.admin-template { min-width: 0; padding: 16px; }
+.admin-template > img { height: 210px; margin-bottom: 16px; }
+.admin-template-heading { display: flex; align-items: start; flex-wrap: wrap; gap: 8px; }
+.admin-template h3 { overflow-wrap: anywhere; font-size: 18px; margin-right: auto; }
+.admin-template p { font-size: 12px; margin: 12px 0; }
+.admin-template-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.admin-template-actions button { flex: 1; font-size: 12px; padding: 8px; }
+.admin-empty { padding: 24px; }
+.admin-coverage { margin-bottom: 32px; }
+.admin-coverage > summary { padding: 20px 24px; cursor: pointer; font-weight: 800; }
+.admin-coverage > summary span { display: inline-block; margin-left: 12px; font-size: 12px; font-weight: 400; }
+.admin-coverage > summary:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+.admin-coverage-body { padding: 0 24px 24px; }
+.admin-coverage-body > p { font-size: 13px; margin-bottom: 16px; }
+.admin-coverage-body > .segmented { margin-bottom: 20px; }
+.admin-coverage-body > .segmented button { font-size: 13px; }
+.admin-coverage-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.admin-layout-card { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 8px 12px; padding: 16px; border: var(--border); border-radius: 12px; background: var(--paper); }
+.admin-layout-card svg { grid-row: span 3; width: 48px; height: 90px; }
+.admin-layout-card h3 { font-size: 15px; }
+.admin-layout-card p, .admin-layout-card small { font-size: 11px; margin: 0; }
+.admin-layout-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.admin-layout-actions button { flex: 1; font-size: 12px; padding: 8px; }
+.admin-pattern-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.admin-pattern-actions button { font-size: 12px; padding: 8px; }
+.admin-pattern-actions small { grid-column: 1 / -1; font-size: 12px; color: var(--secondary); }
+.admin-catalog { scroll-margin-top: 24px; }
+@media (max-width: 1000px) { .admin-coverage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .admin-coverage > summary { padding: 16px; } .admin-coverage > summary span { display: block; margin: 8px 0 0; } .admin-coverage-body { padding: 0 16px 16px; } .admin-coverage-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 900px) { .admin-workspace { grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 24px; } .admin-template-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .admin-workspace { grid-template-columns: minmax(0, 1fr); } .admin-login { padding: 24px; } .admin-app header { flex-wrap: wrap; } .admin-app .header-actions { flex-wrap: wrap; } .admin-search { grid-template-columns: minmax(0, 1fr); } .admin-summary button { margin-left: 0; } }

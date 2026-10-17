@@ -1,12 +1,13 @@
 import { donationUrl } from './settings';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { slideshowGif, slideshowLayout, slideshowOptions } from './slideshow';
 import { photoFilters, defaultFilmFx, type FilmFx } from './filters';
 
 import { createRoot } from 'react-dom/client';
 
-import { layouts, geometry, framePresets } from './layout.mjs';
+import { layouts, geometry, framePresets as localFramePresets } from './layout.mjs';
+import { fetchFrameCatalog, parseCatalogConfig, type CatalogConfig, type FramePreset } from './frame-catalog';
 
 import {
   renderStrip,
@@ -21,10 +22,30 @@ import {
 import './style.css';
 import './frame-presets.css';
 import './export.css';
+const AdminPage = lazy(() => import('./AdminPage'));
 
-type FramePreset = { id: string; name: string; layoutId: string; src: string };
+let catalogConfig: CatalogConfig | null = null;
+let catalogConfigurationError = false;
+try {
+  catalogConfig = parseCatalogConfig(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+} catch { catalogConfigurationError = true; }
 
 function App() {
+  const [framePresets, setFramePresets] = useState<FramePreset[]>(catalogConfig || catalogConfigurationError ? [] : localFramePresets);
+  const [catalogStatus, setCatalogStatus] = useState<'local' | 'loading' | 'ready' | 'error'>(catalogConfig ? 'loading' : catalogConfigurationError ? 'error' : 'local');
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
+  useEffect(() => {
+    if (!catalogConfig) return;
+    const controller = new AbortController();
+    let active = true;
+    setCatalogStatus('loading');
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    fetchFrameCatalog(catalogConfig, new Set(layouts.map((item) => item.id)), controller.signal)
+      .then((frames) => { if (active) { setFramePresets(frames); setCatalogStatus('ready'); } })
+      .catch(() => { if (active) setCatalogStatus('error'); })
+      .finally(() => clearTimeout(timeout));
+    return () => { active = false; clearTimeout(timeout); controller.abort(); };
+  }, [catalogAttempt]);
   // Bahasa dan state aplikasi
 
   const [lang, setLang] = useState<'id' | 'en'>('id');
@@ -473,7 +494,7 @@ function App() {
     setError('');
     setMessage('');
     try {
-      // Reload a replacement PNG even when the same template URL was used earlier.
+      // Reload a replacement image even when the same template URL was used earlier.
       const source = preset.src + (preset.src.includes('?') ? '&' : '?') + 'v=' + Date.now();
       const img = await loadImage(source);
       if (request !== frameRequest.current) return;
@@ -522,7 +543,7 @@ function App() {
 
         kind === 'frame' ? 10 : 5,
 
-        kind === 'frame' ? ['image/png'] : ['image/png', 'image/webp'],
+        ['image/png', 'image/webp'],
       );
 
       if (kind === 'frame') {
@@ -1053,6 +1074,15 @@ function App() {
             </div>
           )}
 
+          {(step === 1 || step === 4) && catalogStatus === 'loading' && (
+            <p className="helper" role="status">{t('Memuat pilihan bingkai…', 'Loading frame designs…')}</p>
+          )}
+          {(step === 1 || step === 4) && catalogStatus === 'error' && (
+            <div className="notice pink" role="alert">
+              <span>{t('Pilihan bingkai belum dapat dimuat. Anda tetap bisa memakai bingkai polos atau upload bingkai sendiri.', 'Frame designs could not be loaded. You can still use a plain frame or upload your own.')}</span>
+              <button disabled={!catalogConfig} onClick={() => setCatalogAttempt((attempt) => attempt + 1)}>{t('Coba lagi', 'Retry')}</button>
+            </div>
+          )}
           {step === 1 && (
             <>
               <div className="layout-group-picker">
@@ -1578,7 +1608,7 @@ function App() {
                         </button>
                       ))}
                     </div>
-                    {availableFrames.length === 0 && (
+                    {availableFrames.length === 0 && (catalogStatus === 'ready' || catalogStatus === 'local') && (
                       <p className="frame-preset-empty">
                         {t('Belum ada template untuk layout ini.', 'No templates for this layout yet.')}
                         {layoutsWithFrames.length > 0 && (
@@ -1650,9 +1680,9 @@ function App() {
 
                     <p>
                       {t(
-                        'PNG transparan, maksimal 10 MB. Ukuran wajib:',
+                        'PNG atau WebP transparan, maksimal 10 MB. Ukuran wajib:',
 
-                        'Transparent PNG, up to 10 MB. Required size:',
+                        'Transparent PNG or WebP, up to 10 MB. Required size:',
                       )}{' '}
                       <strong>
                         {g.width} × {g.height} px
@@ -1690,7 +1720,7 @@ function App() {
                         <input
                           type="file"
 
-                          accept="image/png"
+                          accept="image/png,image/webp"
 
                           onChange={(e) => {
                             uploadAsset(e.target.files?.[0], 'frame');
@@ -2109,8 +2139,18 @@ function App() {
   );
 }
 
+function Root() {
+  const [admin, setAdmin] = useState(location.hash === '#admin');
+  useEffect(() => {
+    const change = () => setAdmin(location.hash === '#admin');
+    window.addEventListener('hashchange', change);
+    return () => window.removeEventListener('hashchange', change);
+  }, []);
+  return admin ? <Suspense fallback={<p role="status">Membuka halaman admin…</p>}><AdminPage config={catalogConfig} /></Suspense> : <App />;
+}
+
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <Root />
   </React.StrictMode>,
 );

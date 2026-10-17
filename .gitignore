@@ -1,2 +1,22 @@
 node_modules
 dist
+.env
+.env.*
+!.env.example
+
+# Deployment metadata and local tooling
+.vercel/
+supabase/.temp/
+supabase/.branches/
+.vscode/
+.idea/
+
+# Generated reports and local files
+coverage/
+*.log
+.DS_Store
+Thumbs.db
+
+# Private key files
+*.pem
+*.key

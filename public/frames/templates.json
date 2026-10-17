@@ -3,43 +3,42 @@
     "id": "Spider_Strip",
     "name": "Spider Strip",
     "layoutId": "pol11",
-    "src": "/frames/Spider_Strip.png"
+    "src": "/frames/Spider_Strip.webp"
   },
-
   {
     "id": "MaroonCute_Strip4",
     "name": "Maroon Cute",
     "layoutId": "strip4",
-    "src": "/frames/Maroon_Cute_Strip4.png"
+    "src": "/frames/Maroon_Cute_Strip4.webp"
   },
   {
     "id": "BlueCute_Strip4",
     "name": "Blue Cute",
     "layoutId": "strip4",
-    "src": "/frames/Blue_Cute_Strip4.png"
+    "src": "/frames/Blue_Cute_Strip4.webp"
   },
   {
     "id": "Sticker_Strip4",
     "name": "Sticker",
     "layoutId": "strip4",
-    "src": "/frames/Sticker_Strip4.png"
+    "src": "/frames/Sticker_Strip4.webp"
   },
   {
     "id": "RandomCute_Strip4",
     "name": "Random Cute",
     "layoutId": "strip4",
-    "src": "/frames/RandomCute_Strip4.png"
+    "src": "/frames/RandomCute_Strip4.webp"
   },
   {
     "id": "Grid4_Maroon_Cute",
     "name": "Maroon Cute",
     "layoutId": "grid4",
-    "src": "/frames/Maroon_Cute_Grid4.png"
+    "src": "/frames/Maroon_Cute_Grid4.webp"
   },
   {
     "id": "Grid4-1_Maroon_Cute",
     "name": "Maroon Cute",
     "layoutId": "wide17",
-    "src": "/frames/Strip4-1_Maroon_Cute.png"
+    "src": "/frames/Strip4-1_Maroon_Cute.webp"
   }
 ]

@@ -21,16 +21,18 @@ for (const preset of presets) {
     ids.add(preset.id);
     const layout = layouts.find((item) => item.id === preset.layoutId);
     if (!layout) throw new Error(`layoutId tidak dikenal: ${preset.layoutId}. Lihat PANDUAN-BINGKAI.md.`);
-    if (!/^\/frames\/[A-Za-z0-9_-]+\.png$/.test(preset.src)) {
-      throw new Error('src harus /frames/nama-file.png (huruf, angka, tanda - atau _).');
+    if (!/^\/frames\/[A-Za-z0-9_-]+\.(png|webp)$/.test(preset.src)) {
+      throw new Error('src harus /frames/nama-file.png atau .webp (huruf, angka, tanda - atau _).');
     }
     const filename = preset.src.slice('/frames/'.length);
     if (!files.includes(filename)) throw new Error(`File ${filename} tidak ditemukan. Periksa huruf besar/kecil.`);
     const path = fileURLToPath(new URL(filename, root));
-    if ((await stat(path)).size > 10 * 1024 * 1024) throw new Error('PNG melebihi 10 MB.');
+    if ((await stat(path)).size > 10 * 1024 * 1024) throw new Error('Bingkai melebihi 10 MB.');
     const bytes = await readFile(path);
-    if (!bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
-      throw new Error('File harus berupa PNG asli, bukan gambar lain yang diganti ekstensi.');
+    const png = bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    const webp = bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP';
+    if (!(preset.src.endsWith('.png') ? png : webp)) {
+      throw new Error('Format file harus sesuai ekstensi PNG/WebP, bukan hanya mengganti nama.');
     }
     const expected = geometry(layout);
     const image = await loadImage(bytes);

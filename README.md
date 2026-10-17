@@ -10,16 +10,28 @@ Kamera memerlukan localhost atau HTTPS. Membuka IP HTTP dari ponsel tidak cukup 
 npm run check:frames
 npm run build
 npm test
+## Optimasi gambar
+Aset logo dan bingkai publik menggunakan WebP kualitas 92. Dimensi bingkai dan transparansi dipertahankan; PNG asli disimpan di `assets/originals/` di luar folder publik. Favicon menggunakan WebP terpisah berukuran 64 × 64 px.
+
+Untuk desain PNG baru, daftarkan dulu di `public/frames/templates.json`, kemudian jalankan `npm run optimize:images`. Konversi memperbarui referensi template secara otomatis dan menolak penimpaan nama yang sudah ada. Hasil unduhan pengguna tetap PNG/GIF.
 ## Template bingkai publik
-Template siap pakai muncul pada **Hias dan unduh → Bingkai**, sesuai layout foto yang dipilih. Daftarnya ada di `public/frames/templates.json` dan PNG disimpan di `public/frames/`. Tidak membutuhkan database. Spider Strip tersedia untuk Polaroid landscape (`pol11`).
+Halaman admin tersedia di `/#admin`: login, upload/validasi PNG-WebP, edit nama/urutan, aktif/nonaktif, dan hapus template. Pasang SQL 04, buat akun Authentication, lalu tetapkan UUID admin melalui SQL 05 mengikuti [panduan admin](PANDUAN-ADMIN.md). Hak tulis ditentukan oleh daftar admin privat dan RLS, bukan sekadar status login.
+
+Jika `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY` diisi pada `.env.local`, website membaca katalog aktif dari tabel Supabase `frame_templates` dan gambar dari bucket publik `frames`. Salin format dari `.env.example`; hanya publishable key yang digunakan. Jangan memasukkan secret key/password ke variabel `VITE_`. `.env.local` tidak diikutkan Git.
+
+Tanpa kedua variabel tersebut, website memakai katalog lokal. Ketika koneksi Supabase dikonfigurasi tetapi gagal, aplikasi menampilkan tombol Coba lagi dan tetap menyediakan bingkai polos/upload; katalog lokal tidak otomatis menggantikan katalog Supabase. Katalog kosong dari database juga dihormati agar template yang dinonaktifkan tidak muncul kembali.
+
+Template siap pakai muncul pada **Hias dan unduh → Bingkai**, sesuai layout foto yang dipilih. Daftarnya ada di `public/frames/templates.json` dan WebP/PNG disimpan di `public/frames/`. Tidak membutuhkan database. Spider Strip tersedia untuk Polaroid landscape (`pol11`).
 
 Lihat [panduan menambahkan bingkai](PANDUAN-BINGKAI.md) untuk langkah desain, penambahan file, konfigurasi, pemeriksaan, dan publikasi. Tombol upload di aplikasi hanya berlaku untuk sesi pengguna, bukan untuk menambahkan template publik.
 
-Build otomatis memeriksa konfigurasi dan PNG template sebelum membuat hasil produksi.
+Build otomatis memeriksa konfigurasi dan template PNG/WebP sebelum membuat hasil produksi.
 ## Deploy ke Vercel
+Untuk menyiapkan database dan Storage sebelum fitur admin, ikuti [panduan Supabase](PANDUAN-DATABASE.md). File SQL ada di `supabase/`. Ini persiapan opsional; website belum membaca database sampai integrasi berikutnya dibuat.
+
 Upload source ke repository Git pribadi Anda, import ke Vercel, pilih preset Vite.
 Build command: npm run build. Output directory: dist.
-Tidak membutuhkan environment variable, backend, database, atau layanan penghubung antarperangkat. PNG dan GIF dibuat serta diunduh langsung dari browser.
+Untuk katalog Supabase, tambahkan `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY` ke Environment Variables project Vercel untuk lingkungan yang digunakan, lalu deploy ulang. File `.env.local` hanya digunakan lokal. Tanpa konfigurasi Supabase, katalog lokal tetap tersedia. PNG dan GIF dibuat serta diunduh langsung dari browser.
 Gunakan Vercel Hobby hanya sesuai ketentuan penggunaan personal/nonkomersial dan batas kuotanya.
 Proyek belum dideploy; langkah ini dilakukan pada akun Vercel Anda.
 ## Fitur
@@ -28,7 +40,7 @@ ID/EN; 16 layout; timer 3/5/10 detik; kamera mirror; upload galeri; review; reta
 Foto hanya ada di memori sesi. Refresh/menutup tab menghapus sesi.
 Upload galeri: tepat sesuai jumlah slot, JPG/PNG/WebP, 10 MB tiap file.
 Stiker: PNG/WebP 5 MB; maksimal 10; disarankan transparan minimal 256 px.
-Bingkai: PNG 10 MB, dimensi persis template; pusat slot transparan. Pemeriksaan pusat tidak menjamin semua area transparan, sehingga preview tetap wajib.
+Bingkai: PNG/WebP 10 MB, dimensi persis template; pusat slot transparan. Pemeriksaan pusat tidak menjamin semua area transparan, sehingga preview tetap wajib.
 Resolusi decode maksimal 24 megapiksel. Template bingkai memiliki area foto transparan.
 ## Layout export
 Filter yang tersedia: Original, Natural, Bright, B&W, Sepia, Vintage, Warm, Cool, Pastel, dan Film. Intensitas filter bisa diatur 0–100% (default 100%). Film FX menyediakan kontrol grain, vignette, dan bocoran cahaya hangat masing-masing 0–100%, termasuk pada Original. Efek diterapkan pada foto dalam preview, PNG, dan GIF; bingkai dan stiker mempertahankan warna aslinya. Reset Film FX menghapus tambahan efek; filter Film sendiri tetap memiliki grain/vignette halus sebagai bagian preset.

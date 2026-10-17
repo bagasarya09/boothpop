@@ -1,6 +1,6 @@
 # Menambahkan template bingkai BOOTHPOP
 
-Template bawaan disimpan sebagai file PNG di `public/frames/` dan didaftarkan di `public/frames/templates.json`. Tidak membutuhkan database atau server upload. Semua pengunjung bisa memilihnya setelah versi website terbaru dipublikasikan.
+Template bawaan disimpan sebagai WebP transparan di `public/frames/` dan didaftarkan di `public/frames/templates.json`. PNG transparan juga didukung. Tidak membutuhkan database atau server upload. Semua pengunjung bisa memilihnya setelah versi website terbaru dipublikasikan.
 
 Tombol **Upload bingkai** di website hanya memakai gambar untuk sesi pengguna tersebut. Tombol itu tidak menambahkan template publik secara permanen.
 
@@ -8,7 +8,7 @@ Tombol **Upload bingkai** di website hanya memakai gambar untuk sesi pengguna te
 
 Setiap desain terhubung ke satu `layoutId`. Jumlah lubang, ukuran kanvas, dan posisi foto harus sesuai dengan layout tersebut. Kesamaan ukuran kanvas saja belum cukup: beberapa layout berbeda memiliki dimensi yang sama.
 
-| layoutId | Nama di aplikasi | Jumlah foto | Lebar × tinggi PNG (px) |
+| layoutId | Nama di aplikasi | Jumlah foto | Lebar × tinggi gambar (px) |
 | --- | --- | --- | --- |
 | strip4 | Strip 4 foto | 4 | 720 × 2140 |
 | strip3 | Strip 3 foto | 3 | 787 × 1800 |
@@ -37,7 +37,7 @@ Ukuran aktual di aplikasi menjadi acuan jika geometri layout diperbarui. Spider 
 4. Buka bagian **Bingkai buatan Anda**, lalu klik **Unduh template bingkai** dan **Unduh panduan posisi foto**.
 5. Buka PNG template di editor gambar yang mendukung transparansi. Gunakan panduan posisi sebagai layer referensi.
 6. Tambahkan desain pada area bingkai. Pertahankan ukuran kanvas, posisi lubang, dan transparansi area foto. Area transparan bukan warna putih.
-7. Sembunyikan/hapus layer panduan sebelum ekspor. Simpan sebagai **PNG transparan**, maksimal 10 MB.
+7. Sembunyikan/hapus layer panduan sebelum ekspor. Simpan sebagai **PNG atau WebP transparan**, maksimal 10 MB. PNG dapat dikonversi otomatis pada langkah 5.
 8. Uji gambar lewat tombol **Upload bingkai** di aplikasi dan periksa semua foto. Pemeriksaan otomatis hanya memeriksa pusat setiap lubang; bagian lain bisa tetap tertutup jika desain tidak sesuai.
 
 Untuk desain yang sudah dibuat, cocokkan dengan template unduhan sebelum mendaftarkannya. Jangan sekadar mengganti ukurannya jika posisi lubang berbeda.
@@ -50,7 +50,7 @@ Simpan gambar ke folder `public/frames/`, misalnya:
 public/frames/bunga-pink.png
 ```
 
-Gunakan nama file dengan huruf, angka, tanda minus atau underscore, tanpa spasi. Akhiri dengan `.png`. Huruf besar/kecil nama file dan konfigurasi harus sama.
+Gunakan nama file dengan huruf, angka, tanda minus atau underscore, tanpa spasi. Akhiri dengan `.png` atau `.webp` sesuai format file. Huruf besar/kecil nama file dan konfigurasi harus sama. Jangan hanya mengganti ekstensi PNG menjadi WebP.
 
 ## 4. Daftarkan template
 
@@ -62,7 +62,7 @@ Buka `public/frames/templates.json`. Tambahkan satu object di dalam daftar. Cont
     "id": "Spider_Strip",
     "name": "Spider Strip",
     "layoutId": "pol11",
-    "src": "/frames/Spider_Strip.png"
+    "src": "/frames/Spider_Strip.webp"
   },
   {
     "id": "bunga-pink",
@@ -87,6 +87,7 @@ Gunakan tanda kutip ganda. Pisahkan object dengan koma, tetapi jangan tambahkan 
 Jalankan dari terminal pada folder proyek:
 
 ```sh
+npm run optimize:images
 npm run check:frames
 npm run build
 npm test
@@ -94,13 +95,15 @@ npm test
 
 Jika PowerShell menolak `npm.ps1`, gunakan `npm.cmd` sebagai pengganti `npm` pada setiap perintah.
 
+`optimize:images` mengonversi PNG baru di `public` menjadi WebP kualitas 92, mempertahankan dimensi dan memeriksa transparansi per piksel. Referensi di `templates.json` diperbarui otomatis. PNG asli dipindahkan ke `assets/originals/`, di luar folder publik sehingga tidak ikut dihosting. WebP yang sudah ada tidak dikompresi ulang. Jika nama file sudah digunakan oleh WebP/backup sebelumnya, gunakan nama baru untuk revisi desain. Jika Anda sudah menyiapkan WebP sendiri, perintah konversi bisa dilewati.
+
 Pemeriksaan menampilkan nama desain dan layout jika berhasil. Build otomatis menjalankan pemeriksaan template dan berhenti jika ada template yang tidak valid.
 
 Kemudian buka website lokal, pilih layout terkait, dan lanjutkan ke **Hias dan unduh → Bingkai**. Klik kartu desain, periksa preview, lalu unduh PNG untuk memastikan desain ikut tersimpan. Pilih **Bingkai polos** untuk melepas desain.
 
 ## 6. Publikasikan agar tersedia untuk semua pengunjung
 
-Perubahan lokal belum muncul pada website publik. Sertakan file PNG baru, `templates.json`, dan perubahan proyek ini dalam versi yang dipublikasikan.
+Perubahan lokal belum muncul pada website publik. Sertakan file WebP baru, `templates.json`, dan perubahan proyek ini dalam versi yang dipublikasikan.
 
 - Jika hosting Anda terhubung ke repository: commit dan push perubahan ke branch deployment, lalu tunggu build/deployment berhasil.
 - Jika Anda mengunggah hasil build secara manual: jalankan `npm run build`, lalu unggah isi `dist` ke hosting yang Anda gunakan.
@@ -110,7 +113,7 @@ Sesudah deployment, buka alamat website publik dan ulangi pengujian pada layout 
 ## Mengubah atau menghapus template
 
 - Mengubah nama: edit `name` di JSON.
-- Mengganti desain: simpan PNG dengan nama baru dan ubah `src` agar gambar terbaru tidak tertahan cache browser.
-- Menghapus: hapus object template dari JSON; file PNG boleh dihapus jika tidak dipakai entri lain.
+- Mengganti desain: simpan PNG/WebP dengan nama baru dan ubah `src` agar gambar terbaru tidak tertahan cache browser.
+- Menghapus: hapus object template dari JSON; file gambar boleh dihapus jika tidak dipakai entri lain.
 
 Jalankan pemeriksaan dan publikasikan ulang setiap kali melakukan perubahan.
