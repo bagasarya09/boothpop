@@ -1,4 +1,5 @@
 import { donationUrl } from './settings';
+import { readPhotoSession, savePhotoSession, type PhotoSession } from './photo-session';
 
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { slideshowGif, slideshowLayout, slideshowOptions } from './slideshow';
@@ -31,7 +32,7 @@ try {
   catalogConfig = parseCatalogConfig(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
 } catch { catalogConfigurationError = true; }
 
-function App() {
+function App({ saved = null, storageUnavailable = false }: { saved?: PhotoSession | null; storageUnavailable?: boolean }) {
   const [framePresets, setFramePresets] = useState<FramePreset[]>(catalogConfig || catalogConfigurationError ? [] : localFramePresets);
   const [catalogStatus, setCatalogStatus] = useState<'local' | 'loading' | 'ready' | 'error'>(catalogConfig ? 'loading' : catalogConfigurationError ? 'error' : 'local');
   const [catalogAttempt, setCatalogAttempt] = useState(0);
@@ -53,16 +54,17 @@ function App() {
 
   const t = (id: string, en: string) => (lang === 'id' ? id : en);
 
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(saved?.step ?? 0);
 
-  const [layout, setLayout] = useState<Layout>(layouts[0]);
-  const [layoutGroup, setLayoutGroup] = useState(layouts[0].count);
+  const [layout, setLayout] = useState<Layout>(layouts.find(l => l.id === saved?.layoutId) ?? layouts[0]);
+  const [layoutGroup, setLayoutGroup] = useState(layout.count);
   const layoutCounts = [...new Set(layouts.map((item) => item.count))].sort((a, b) => a - b);
 
-  const [timer, setTimer] = useState(3);
+  const [timer, setTimer] = useState(saved?.timer ?? 3);
 
-  const [photos, setPhotos] = useState<string[]>([]);
-  const [captureShots, setCaptureShots] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<string[]>(saved?.photos ?? []);
+  const [captureShots, setCaptureShots] = useState<string[]>(saved?.captureShots ?? []);
+  const [storageError, setStorageError] = useState(storageUnavailable);
 
   const [camera, setCamera] = useState<'idle' | 'loading' | 'ready' | 'error'>(
     'idle',
@@ -77,19 +79,19 @@ function App() {
 
   const [pose, setPose] = useState(0);
 
-  const [retake, setRetake] = useState<number | null>(null);
+  const [retake, setRetake] = useState<number | null>(saved?.retake ?? null);
 
-  const [color, setColor] = useState('#FFFFFF');
+  const [color, setColor] = useState(saved?.color ?? '#FFFFFF');
 
-  const [filter, setFilter] = useState('original');
-  const [filterIntensity, setFilterIntensity] = useState(100);
-  const [filmFx, setFilmFx] = useState<FilmFx>({ ...defaultFilmFx });
+  const [filter, setFilter] = useState(saved?.filter ?? 'original');
+  const [filterIntensity, setFilterIntensity] = useState(saved?.filterIntensity ?? 100);
+  const [filmFx, setFilmFx] = useState<FilmFx>(saved?.filmFx ?? { ...defaultFilmFx });
 
-  const [decoration, setDecoration] = useState('none');
+  const [decoration, setDecoration] = useState(saved?.decoration ?? 'none');
 
-  const [frame, setFrame] = useState<string | null>(null);
+  const [frame, setFrame] = useState<string | null>(saved?.frame ?? null);
 
-  const [stickers, setStickers] = useState<Sticker[]>([]);
+  const [stickers, setStickers] = useState<Sticker[]>(saved?.stickers ?? []);
 
   const [selected, setSelected] = useState('');
 
@@ -98,14 +100,21 @@ function App() {
   const [preview, setPreview] = useState('');
 
   const [exporting, setExporting] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'png' | 'gif'>('png');
-  const [gifSeconds, setGifSeconds] = useState<0.5 | 1 | 2>(0.5);
+  const [exportFormat, setExportFormat] = useState<'png' | 'gif'>(saved?.exportFormat ?? 'png');
+  const [gifSeconds, setGifSeconds] = useState<0.5 | 1 | 2>(saved?.gifSeconds ?? 0.5);
   const [gifProgress, setGifProgress] = useState('');
   const [gifPreview, setGifPreview] = useState('');
 
   const [message, setMessage] = useState('');
 
   const [info, setInfo] = useState<string | null>(null);
+
+  const session: PhotoSession = { version: 1, layoutId: layout.id, step, timer, photos, captureShots, retake, color, filter, filterIntensity, filmFx, decoration, frame, stickers, exportFormat, gifSeconds };
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+  useEffect(() => {
+    void savePhotoSession(sessionRef.current).then(() => setStorageError(false), () => setStorageError(true));
+  }, [layout.id, step, timer, photos, captureShots, retake, color, filter, filterIntensity, filmFx, decoration, frame, stickers, exportFormat, gifSeconds]);
 
   // Referensi kamera dan kontrol proses asynchronous
 
@@ -278,14 +287,14 @@ function App() {
 
     const ticket = ++generation.current;
 
-    const result = retake !== null ? [...photos] : Array<string>(layout.count).fill('');
-    setCaptureShots(retake !== null ? result.map((photo, slot) => slot === retake ? '' : photo) : []);
+    const result = retake !== null ? [...photos] : Array.from({ length: layout.count }, (_, index) => captureShots[index] || '');
+    setCaptureShots(retake !== null ? result.map((photo, slot) => slot === retake ? '' : photo) : [...result]);
 
     try {
       const indices =
         retake !== null
           ? [retake]
-          : Array.from({ length: layout.count }, (_, i) => i);
+          : Array.from({ length: layout.count }, (_, i) => i).filter(index => !result[index]);
 
       for (const index of indices) {
         setPose(index);
@@ -323,6 +332,8 @@ function App() {
         result[index] = c.toDataURL('image/jpeg', 0.9);
         setCaptureShots([...result]);
         setCaptureFlash(true);
+        // Commit each completed shot before starting the next countdown.
+        await savePhotoSession({ ...sessionRef.current, captureShots: [...result], step: 2 }).then(() => setStorageError(false), () => setStorageError(true));
         // Leave the final shot visible briefly before moving to review, too.
         await new Promise((resolve) => setTimeout(resolve, 180));
         if (ticket !== generation.current) return;
@@ -706,7 +717,7 @@ function App() {
 
   function startOver() {
     if (
-      photos.length &&
+      (photos.length || captureShots.some(Boolean)) &&
       !confirm(
         t(
           'Mulai sesi baru? Foto sesi ini akan dihapus. Pastikan hasil sudah disimpan.',
@@ -724,6 +735,7 @@ function App() {
 
     setPhotos([]);
     setCaptureShots([]);
+    setRetake(null);
 
     setStickers([]);
 
@@ -813,6 +825,7 @@ function App() {
 
   return (
     <div className={'app' + (step === 4 ? ' app-editing' : '')}>
+      {storageError && <p className="helper" role="alert">{t('Penyimpanan sesi di browser gagal. Jangan refresh sebelum mengunduh hasil; periksa ruang penyimpanan atau izin browser.', 'Browser session storage failed. Download your results before refreshing; check storage space or browser permissions.')}</p>}
       <header>
         <button
           className="wordmark"
@@ -1118,7 +1131,7 @@ function App() {
 
                     onClick={() => {
                       if (
-                        photos.length &&
+                        (photos.length || captureShots.some(Boolean)) &&
                         layout.id !== l.id &&
                         !confirm(
                           t(
@@ -1132,6 +1145,8 @@ function App() {
 
                       if (layout.id !== l.id) {
                         setPhotos([]);
+                        setCaptureShots([]);
+                        setRetake(null);
 
                         setFrame(null);
 
@@ -1368,7 +1383,7 @@ function App() {
                 >
                   {busy
                     ? t('Sedang mengambil foto…', 'Taking photos…')
-                    : t('Ambil foto', 'Take photos')}{' '}
+                    : captureShots.some(Boolean) && retake === null ? t('Lanjutkan foto', 'Continue photos') : t('Ambil foto', 'Take photos')}{' '}
                   ●
                 </button>
 
@@ -2000,9 +2015,9 @@ function App() {
 
           <p className="session-note">
             {t(
-              'Foto hanya tersedia selama sesi ini. Refresh atau menutup tab akan menghapus sesi.',
+              'Foto disimpan di browser perangkat ini agar tetap tersedia setelah refresh. Mulai sesi baru untuk menghapus sesi ini.',
 
-              'Photos are available only during this session. Refreshing or closing the tab clears your session.',
+              'Photos are saved in this browser to survive refresh. Start a new session to clear this session.',
             )}
           </p>
         </main>
@@ -2122,9 +2137,9 @@ function App() {
 
                 <p>
                   {t(
-                    'Sesi tersimpan sementara dalam memori. Refresh atau menutup halaman akan menghapus sesi. Penyedia hosting tetap dapat memiliki log permintaan website sesuai kebijakannya.',
+                    'Foto dan pengaturan sesi disimpan di browser perangkat ini untuk pemulihan setelah refresh, bukan di database atau Storage Supabase. Mulai sesi baru untuk menghapus sesi ini. Menghapus data situs dapat menghilangkan sesi. Penyedia hosting tetap dapat memiliki log permintaan website sesuai kebijakannya.',
 
-                    'Sessions are held temporarily in memory. Refreshing or closing the page clears them. The hosting provider may retain website request logs under its own policy.',
+                    'Photos and session settings are saved in this browser for recovery after refresh, not in Supabase database or Storage. Start a new session to clear this session. Clearing site data can remove it. The hosting provider may retain website request logs under its own policy.',
                   )}
                 </p>
               </>
@@ -2140,6 +2155,19 @@ function App() {
   );
 }
 
+function PhotoBooth() {
+  const [loaded, setLoaded] = useState<{ saved: PhotoSession | null; storageUnavailable: boolean } | null>(null);
+  useEffect(() => {
+    let active = true;
+    void readPhotoSession().then(
+      saved => { if (active) setLoaded({ saved, storageUnavailable: false }); },
+      () => { if (active) setLoaded({ saved: null, storageUnavailable: true }); },
+    );
+    return () => { active = false; };
+  }, []);
+  return loaded ? <App {...loaded} /> : <p role="status">Memulihkan sesi foto…</p>;
+}
+
 function Root() {
   const [admin, setAdmin] = useState(location.hash === '#admin');
   useEffect(() => {
@@ -2147,11 +2175,11 @@ function Root() {
     window.addEventListener('hashchange', change);
     return () => window.removeEventListener('hashchange', change);
   }, []);
-  return admin && AdminPage ? <Suspense fallback={<p role="status">Membuka halaman admin…</p>}><AdminPage config={catalogConfig} /></Suspense> : <App />;
+  return admin && AdminPage ? <Suspense fallback={<p role="status">Membuka halaman admin…</p>}><AdminPage config={catalogConfig} /></Suspense> : <PhotoBooth />;
 }
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {import.meta.env.DEV ? <Root /> : <App />}
+    {import.meta.env.DEV ? <Root /> : <PhotoBooth />}
   </React.StrictMode>,
 );

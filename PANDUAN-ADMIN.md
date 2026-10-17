@@ -99,7 +99,11 @@ Muat ulang halaman photobooth untuk mengambil katalog terbaru. Tidak perlu deplo
 
 ## Data pengunjung
 
-Upload foto, stiker, dan bingkai oleh pengunjung tetap hanya diproses di browser. Alur itu tidak memanggil API penyimpanan admin. Foto hasil sesi pengguna tidak disimpan di database atau Storage.
+Upload foto, stiker, dan bingkai oleh pengunjung tetap hanya diproses di browser. Alur itu tidak memanggil API penyimpanan admin. Foto hasil sesi pengguna tidak disimpan di database atau Storage Supabase.
+
+Foto yang sudah diambil, termasuk sesi yang belum selesai, dan pengaturan edit disimpan pada IndexedDB di browser perangkat pengunjung. Refresh pada tab yang sama memulihkan sesi. Kamera tidak otomatis menyala: klik **Aktifkan kamera**, kemudian **Lanjutkan foto** untuk mengisi slot yang masih kosong. Refresh saat hitung mundur akan mengulang hitung mundur slot tersebut saat dilanjutkan. Sesi yang lengkap langsung dapat ditinjau kembali.
+
+Klik **Mulai sesi baru** untuk mengosongkan foto dan pengaturan sesi tersimpan. Pada perangkat bersama, lakukan ini setelah mengunduh hasil. Pemulihan berlaku di browser, alamat website, dan tab yang sama; bukan transfer antarperangkat. Menghapus data situs atau pembatasan penyimpanan browser dapat menghilangkan sesi. Jika penyimpanan gagal, aplikasi menampilkan peringatan agar hasil diunduh sebelum refresh.
 
 ## Pengujian dan batas verifikasi
 
