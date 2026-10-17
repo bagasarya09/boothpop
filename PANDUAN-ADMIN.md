@@ -1,6 +1,25 @@
 # Halaman admin BOOTHPOP
 
-Alamat halaman admin adalah `/#admin`, misalnya `http://localhost:5173/#admin` atau `https://alamat-website-anda.vercel.app/#admin`. URL dengan hash ini bekerja pada hosting statis tanpa menambahkan rewrite routing. Halaman admin memakai konfigurasi URL Supabase dan publishable key yang sama dengan katalog website.
+Halaman admin hanya disertakan saat menjalankan server pengembangan lokal dengan `npm.cmd run dev`. Buka alamat lokal yang muncul di terminal lalu tambahkan `/#admin`, misalnya `http://127.0.0.1:5173/#admin`. Halaman admin memakai konfigurasi URL Supabase dan publishable key yang sama dengan katalog website.
+
+Build produksi (`npm.cmd run build`) tidak menyertakan halaman, rute, CSS, maupun kode API admin. Membuka `/#admin` pada website Vercel tetap menampilkan photobooth biasa. Ini tidak menyembunyikan source jika repository GitHub Anda publik; hak pengelolaan data tetap dilindungi Supabase Auth dan RLS.
+
+## Penggunaan lokal dan deploy Vercel
+
+Tetap gunakan satu folder proyek; tidak perlu membuat folder admin terpisah.
+
+1. Di komputer Anda, buka folder BOOTHPOP melalui VS Code, kemudian buka terminal.
+2. Jika dependency belum terpasang, jalankan `npm.cmd ci`.
+3. Pastikan `.env.local` memuat `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY` milik project Anda. Jangan isi secret key atau password database. File ini tidak diunggah ke GitHub.
+4. Jalankan `npm.cmd run dev`. Gunakan URL yang benar-benar muncul di terminal (port bisa berbeda), lalu tambahkan `/#admin`.
+5. Login dengan akun admin Anda. Penambahan dan perubahan template disimpan ke Supabase yang sama; komputer harus terhubung internet.
+6. Setelah selesai, klik **Keluar**, lalu tekan `Ctrl+C` di terminal untuk menghentikan server lokal. Website Vercel tetap berjalan.
+7. Sebelum push ke GitHub, jalankan `npm.cmd run build`. Selain kompilasi, perintah ini memeriksa hasil `dist/` agar kode admin tidak ikut terkirim. Jika pemeriksaan gagal, jangan deploy hasil tersebut.
+8. Saat mengimpor repository di Vercel, pilih preset **Vite**, Build Command `npm run build`, dan Output Directory `dist`. Jangan gunakan `npm run dev` sebagai perintah deploy.
+9. Isi dua Environment Variables publik tadi di Vercel, lalu deploy. Jangan mengunggah `.env.local` atau memasukkan secret key/password database ke variabel `VITE_*`.
+10. Uji website Vercel: membuka `/#admin` harus tetap menampilkan photobooth. Untuk mengelola template, kembali ke URL lokal di komputer Anda. Muat ulang website publik untuk melihat perubahan katalog.
+
+Server lokal secara default hanya mendengarkan `127.0.0.1` (komputer sendiri). Jangan mengeksposnya melalui tunnel, port forwarding, atau mengganti host ke `0.0.0.0` jika admin ingin tetap lokal. `npm.cmd run preview` menampilkan build produksi, sehingga halaman admin juga tidak tersedia di sana.
 
 ## 1. Pasang aturan akses admin
 
@@ -76,7 +95,7 @@ Jika browser tidak mendukung ekspor WebP, konversi PNG ditolak dengan pesan yang
 - **Hapus:** meminta konfirmasi, menghapus metadata lalu file gambar. Jika file belum berhasil dihapus, pesan menyebutkan nama file untuk dibersihkan melalui Dashboard.
 - Mengganti gambar/layout dilakukan dengan menambahkan template baru. Cara ini menjaga kecocokan ukuran dan menghindari gambar lama dari cache.
 
-Muat ulang halaman photobooth untuk mengambil katalog terbaru. Tidak perlu deploy ulang hanya untuk perubahan template. Versi kode halaman admin pertama kali tetap perlu dideploy. Environment Vercel harus memuat dua variabel publik yang sama dengan konfigurasi lokal.
+Muat ulang halaman photobooth untuk mengambil katalog terbaru. Tidak perlu deploy ulang hanya untuk perubahan template. Kode halaman admin dijalankan lokal dan tidak dideploy. Environment Vercel harus memuat dua variabel publik yang sama dengan konfigurasi lokal.
 
 ## Data pengunjung
 

@@ -22,7 +22,8 @@ import {
 import './style.css';
 import './frame-presets.css';
 import './export.css';
-const AdminPage = lazy(() => import('./AdminPage'));
+// Vite removes this import and its admin dependencies from production builds.
+const AdminPage = import.meta.env.DEV ? lazy(() => import('./AdminPage')) : null;
 
 let catalogConfig: CatalogConfig | null = null;
 let catalogConfigurationError = false;
@@ -2146,11 +2147,11 @@ function Root() {
     window.addEventListener('hashchange', change);
     return () => window.removeEventListener('hashchange', change);
   }, []);
-  return admin ? <Suspense fallback={<p role="status">Membuka halaman admin…</p>}><AdminPage config={catalogConfig} /></Suspense> : <App />;
+  return admin && AdminPage ? <Suspense fallback={<p role="status">Membuka halaman admin…</p>}><AdminPage config={catalogConfig} /></Suspense> : <App />;
 }
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <Root />
+    {import.meta.env.DEV ? <Root /> : <App />}
   </React.StrictMode>,
 );
