@@ -29,7 +29,9 @@ const AdminPage = import.meta.env.DEV ? lazy(() => import('./AdminPage')) : null
 let catalogConfig: CatalogConfig | null = null;
 let catalogConfigurationError = false;
 try {
-  catalogConfig = parseCatalogConfig(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+  if (import.meta.env.VITE_FRAME_CATALOG_SOURCE === 'supabase') {
+    catalogConfig = parseCatalogConfig(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+  }
 } catch { catalogConfigurationError = true; }
 
 function App({ saved = null, storageUnavailable = false }: { saved?: PhotoSession | null; storageUnavailable?: boolean }) {

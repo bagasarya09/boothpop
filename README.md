@@ -15,11 +15,13 @@ Aset logo dan bingkai publik menggunakan WebP kualitas 92. Dimensi bingkai dan t
 
 Untuk desain PNG baru, daftarkan dulu di `public/frames/templates.json`, kemudian jalankan `npm run optimize:images`. Konversi memperbarui referensi template secara otomatis dan menolak penimpaan nama yang sudah ada. Hasil unduhan pengguna tetap PNG/GIF.
 ## Template bingkai publik
-Halaman admin tersedia di `/#admin`: login, upload/validasi PNG-WebP, edit nama/urutan, aktif/nonaktif, dan hapus template. Pasang SQL 04, buat akun Authentication, lalu tetapkan UUID admin melalui SQL 05 mengikuti [panduan admin](PANDUAN-ADMIN.md). Hak tulis ditentukan oleh daftar admin privat dan RLS, bukan sekadar status login.
+Website secara default memakai katalog lokal tanpa database. Tujuh template tersedia di `public/frames/templates.json` dengan gambar di `public/frames/`. Untuk menambah template publik, ubah katalog dan tambahkan file gambarnya, lalu build/deploy ulang.
 
-Jika `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY` diisi pada `.env.local`, website membaca katalog aktif dari tabel Supabase `frame_templates` dan gambar dari bucket publik `frames`. Salin format dari `.env.example`; hanya publishable key yang digunakan. Jangan memasukkan secret key/password ke variabel `VITE_`. `.env.local` tidak diikutkan Git.
+Halaman admin Supabase hanya tersedia saat development di `/#admin` dan memerlukan mode Supabase. Untuk mengaktifkannya kembali, ikuti [panduan admin](PANDUAN-ADMIN.md). Hak tulis ditentukan oleh daftar admin privat dan RLS, bukan sekadar status login.
 
-Tanpa kedua variabel tersebut, website memakai katalog lokal. Ketika koneksi Supabase dikonfigurasi tetapi gagal, aplikasi menampilkan tombol Coba lagi dan tetap menyediakan bingkai polos/upload; katalog lokal tidak otomatis menggantikan katalog Supabase. Katalog kosong dari database juga dihormati agar template yang dinonaktifkan tidak muncul kembali.
+Integrasi Supabase tetap disimpan sebagai opsi. Hanya jika `VITE_FRAME_CATALOG_SOURCE=supabase` diatur dan `VITE_SUPABASE_URL` serta `VITE_SUPABASE_PUBLISHABLE_KEY` diisi, website membaca katalog aktif dari tabel Supabase `frame_templates` dan gambar dari bucket publik `frames`. Secara default (atau dengan `VITE_FRAME_CATALOG_SOURCE=local`), URL/key Supabase lama diabaikan. Salin format dari `.env.example`; hanya publishable key yang digunakan. Jangan memasukkan secret key/password ke variabel `VITE_`. `.env.local` tidak diikutkan Git.
+
+Saat mode Supabase diaktifkan tetapi koneksinya gagal, aplikasi menampilkan tombol Coba lagi dan tetap menyediakan bingkai polos/upload; katalog lokal tidak otomatis menggantikan katalog Supabase. Katalog kosong dari database juga dihormati agar template yang dinonaktifkan tidak muncul kembali.
 
 Template siap pakai muncul pada **Hias dan unduh → Bingkai**, sesuai layout foto yang dipilih. Daftarnya ada di `public/frames/templates.json` dan WebP/PNG disimpan di `public/frames/`. Tidak membutuhkan database. Spider Strip tersedia untuk Polaroid landscape (`pol11`).
 
@@ -27,11 +29,11 @@ Lihat [panduan menambahkan bingkai](PANDUAN-BINGKAI.md) untuk langkah desain, pe
 
 Build otomatis memeriksa konfigurasi dan template PNG/WebP sebelum membuat hasil produksi.
 ## Deploy ke Vercel
-Untuk menyiapkan database dan Storage sebelum fitur admin, ikuti [panduan Supabase](PANDUAN-DATABASE.md). File SQL ada di `supabase/`. Ini persiapan opsional; website belum membaca database sampai integrasi berikutnya dibuat.
+Database tidak diperlukan untuk deployment saat ini. Jika ingin mengaktifkan Supabase kembali, ikuti [panduan Supabase](PANDUAN-DATABASE.md). File SQL ada di `supabase/`.
 
 Upload source ke repository Git pribadi Anda, import ke Vercel, pilih preset Vite.
 Build command: npm run build. Output directory: dist.
-Untuk katalog Supabase, tambahkan `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY` ke Environment Variables project Vercel untuk lingkungan yang digunakan, lalu deploy ulang. File `.env.local` hanya digunakan lokal. Tanpa konfigurasi Supabase, katalog lokal tetap tersedia. PNG dan GIF dibuat serta diunduh langsung dari browser.
+Gunakan `VITE_FRAME_CATALOG_SOURCE=local` atau biarkan variabel sumber katalog tidak diisi. Untuk katalog Supabase, tambahkan `VITE_FRAME_CATALOG_SOURCE=supabase`, `VITE_SUPABASE_URL`, dan `VITE_SUPABASE_PUBLISHABLE_KEY` ke Environment Variables project Vercel untuk lingkungan yang digunakan, lalu deploy ulang. File `.env.local` hanya digunakan lokal. PNG dan GIF dibuat serta diunduh langsung dari browser.
 Gunakan Vercel Hobby hanya sesuai ketentuan penggunaan personal/nonkomersial dan batas kuotanya.
 Proyek belum dideploy; langkah ini dilakukan pada akun Vercel Anda.
 ## Fitur
