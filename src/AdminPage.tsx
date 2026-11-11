@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useConfirmation } from './confirmation';
 import type { Session } from '@supabase/supabase-js';
 import type { CatalogConfig } from './frame-catalog';
 import { layouts, geometry } from './layout.mjs';
@@ -9,6 +10,7 @@ import { createAdminClient, listAdminTemplates, addAdminTemplate, editAdminTempl
 import './admin.css';
 
 export default function AdminPage({ config }: { config: CatalogConfig | null }) {
+  const { askConfirmation, confirmationDialog } = useConfirmation();
   const [client] = useState(() => config ? createAdminClient(config) : null);
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -123,7 +125,7 @@ export default function AdminPage({ config }: { config: CatalogConfig | null }) 
     finally { setBusy(false); }
   }
   async function remove(row: AdminTemplate) {
-    if (!client || busy || preparing || !confirm(`Hapus template "${row.name}" beserta gambarnya? Tindakan ini tidak dapat dibatalkan.`)) return;
+    if (!client || busy || preparing || !await askConfirmation(`Hapus template "${row.name}" beserta gambarnya? Tindakan ini tidak dapat dibatalkan.`)) return;
     setBusy(true); setError(''); setMessage('');
     try {
       const warning = await deleteAdminTemplate(client, row);
@@ -138,6 +140,7 @@ export default function AdminPage({ config }: { config: CatalogConfig | null }) 
   const missing = coverage.filter((item) => item.total === 0).length;
   const shownCoverage = coverage.filter((item) => coverageFilter === 'all' || (coverageFilter === 'missing' ? item.total === 0 : item.total > 0));
   return <div className="app admin-app">
+    {confirmationDialog}
     <header>
       <a className="wordmark admin-brand" href="#">BOOTHPOP <span className="pill yellow">ADMIN</span></a>
       <div className="header-actions"><a className="button" href="#">Ke photobooth ↗</a>{session && <button disabled={busy || preparing} onClick={logout}>Keluar</button>}</div>

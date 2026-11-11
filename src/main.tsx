@@ -1,4 +1,5 @@
 import { donationUrl } from './settings';
+import { useConfirmation } from './confirmation';
 import { readPhotoSession, savePhotoSession, type PhotoSession } from './photo-session';
 
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
@@ -53,6 +54,7 @@ function App({ saved = null, storageUnavailable = false }: { saved?: PhotoSessio
   // Bahasa dan state aplikasi
 
   const [lang, setLang] = useState<'id' | 'en'>('id');
+  const { askConfirmation, confirmationDialog } = useConfirmation(lang);
 
   const t = (id: string, en: string) => (lang === 'id' ? id : en);
 
@@ -748,10 +750,10 @@ function App({ saved = null, storageUnavailable = false }: { saved?: PhotoSessio
 
   // Pengaturan sesi baru
 
-  function startOver() {
+  async function startOver() {
     if (
       (photos.length || captureShots.some(Boolean)) &&
-      !confirm(
+      !await askConfirmation(
         t(
           'Mulai sesi baru? Foto sesi ini akan dihapus. Pastikan hasil sudah disimpan.',
 
@@ -858,7 +860,8 @@ function App({ saved = null, storageUnavailable = false }: { saved?: PhotoSessio
 
   return (
     <div className={'app' + (step === 4 ? ' app-editing' : '')}>
-      {storageError && <p className="helper" role="alert">{t('Penyimpanan sesi di browser gagal. Jangan refresh sebelum mengunduh hasil; periksa ruang penyimpanan atau izin browser.', 'Browser session storage failed. Download your results before refreshing; check storage space or browser permissions.')}</p>}
+      {confirmationDialog}
+      {storageError && <p className="notice pink" role="alert">{t('Penyimpanan sesi di browser gagal. Jangan refresh sebelum mengunduh hasil; periksa ruang penyimpanan atau izin browser.', 'Browser session storage failed. Download your results before refreshing; check storage space or browser permissions.')}</p>}
       <header>
         <button
           className="wordmark"
@@ -1162,11 +1165,11 @@ function App({ saved = null, storageUnavailable = false }: { saved?: PhotoSessio
                     aria-pressed={layout.id === l.id}
                     disabled={busy}
 
-                    onClick={() => {
+                    onClick={async () => {
                       if (
                         (photos.length || captureShots.some(Boolean)) &&
                         layout.id !== l.id &&
-                        !confirm(
+                        !await askConfirmation(
                           t(
                             'Mengubah layout akan menghapus foto dan bingkai sesi ini. Lanjutkan?',
 
@@ -1505,9 +1508,9 @@ function App({ saved = null, storageUnavailable = false }: { saved?: PhotoSessio
                 </button>
 
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (
-                      confirm(
+                      await askConfirmation(
                         t(
                           'Ulang semua pose? Foto lama baru diganti setelah sesi berhasil.',
 
