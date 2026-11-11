@@ -3,7 +3,7 @@ import { readPhotoSession, savePhotoSession, type PhotoSession } from './photo-s
 
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { slideshowGif, slideshowLayout, slideshowOptions } from './slideshow';
-import { photoFilters, defaultFilmFx, type FilmFx } from './filters';
+import { applyPhotoFilter, photoFilters, defaultFilmFx, type FilmFx } from './filters';
 
 import { createRoot } from 'react-dom/client';
 
@@ -102,7 +102,8 @@ function App({ saved = null, storageUnavailable = false }: { saved?: PhotoSessio
   const [preview, setPreview] = useState('');
 
   const [exporting, setExporting] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'png' | 'gif'>(saved?.exportFormat ?? 'png');
+  const [requestedExportFormat, setExportFormat] = useState<'png' | 'gif'>(saved?.exportFormat ?? 'png');
+  const exportFormat = layout.count > 1 ? requestedExportFormat : 'png';
   const [gifSeconds, setGifSeconds] = useState<0.5 | 1 | 2>(saved?.gifSeconds ?? 0.5);
   const [gifProgress, setGifProgress] = useState('');
   const [gifPreview, setGifPreview] = useState('');
@@ -121,6 +122,36 @@ function App({ saved = null, storageUnavailable = false }: { saved?: PhotoSessio
   // Referensi kamera dan kontrol proses asynchronous
 
   const video = useRef<HTMLVideoElement>(null);
+  const cameraPreview = useRef<HTMLCanvasElement>(null);
+  const hasCameraFilter = filter !== 'original' || filmFx.grain > 0 || filmFx.vignette > 0 || filmFx.lightLeak > 0;
+
+  useEffect(() => {
+    if (step !== 2 || camera !== 'ready' || !hasCameraFilter) return;
+    const canvas = cameraPreview.current;
+    const context = canvas?.getContext('2d', { willReadFrequently: true });
+    if (!canvas || !context) return;
+    let animation = 0;
+    let lastTime = 0;
+    const draw = (time: number) => {
+      const source = video.current;
+      if (source && source.readyState >= 2 && source.videoWidth && time - lastTime >= 50) {
+        lastTime = time;
+        const width = Math.min(640, source.videoWidth);
+        const height = Math.round(width * source.videoHeight / source.videoWidth);
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+        }
+        context.drawImage(source, 0, 0, width, height);
+        const pixels = context.getImageData(0, 0, width, height);
+        applyPhotoFilter(pixels.data, width, height, filter, filterIntensity, filmFx);
+        context.putImageData(pixels, 0, 0);
+      }
+      animation = requestAnimationFrame(draw);
+    };
+    animation = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(animation);
+  }, [step, camera, hasCameraFilter, filter, filterIntensity, filmFx]);
 
   const stream = useRef<MediaStream | null>(null);
 
@@ -846,7 +877,7 @@ function App({ saved = null, storageUnavailable = false }: { saved?: PhotoSessio
 
           aria-label={t('Beranda BOOTHPOP', 'BOOTHPOP home')}
         >
-          <span className="logo-icon">▣</span> BOOTHPOP
+          <img className="logo-icon" src="/Logo_Boothpop.webp" alt="" width={40} height={40} /> BOOTHPOP
         </button>
 
         <div className="header-actions">
@@ -1320,6 +1351,7 @@ function App({ saved = null, storageUnavailable = false }: { saved?: PhotoSessio
 
                   style={{ transform: 'scaleX(-1)' }}
                 />
+                {hasCameraFilter && camera === 'ready' && <canvas ref={cameraPreview} className="camera-filter-preview" aria-hidden="true" />}
 
                 {camera !== 'ready' && (
                   <div className="camera-placeholder">
@@ -1361,6 +1393,16 @@ function App({ saved = null, storageUnavailable = false }: { saved?: PhotoSessio
                 {captureFlash && <div className="capture-flash" aria-hidden="true" />}
               </div>
 
+              <div className="camera-filter-controls">
+                <label htmlFor="camera-filter">{t('Filter kamera', 'Camera filter')}</label>
+                <select id="camera-filter" value={filter} disabled={busy} onChange={(event) => setFilter(event.target.value)}>
+                  {photoFilters.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                </select>
+                <label className="slider" htmlFor="camera-filter-intensity">
+                  <span>{t('Intensitas', 'Intensity')} {filterIntensity}%</span>
+                  <input id="camera-filter-intensity" type="range" min="0" max="100" value={filterIntensity} disabled={busy || filter === 'original'} onChange={(event) => setFilterIntensity(Number(event.target.value))} />
+                </label>
+              </div>
               <div className="camera-bottom">
                 <p>
                   {retake !== null
@@ -1543,13 +1585,13 @@ function App({ saved = null, storageUnavailable = false }: { saved?: PhotoSessio
                   )}
                 </p>
                 <div className="gif-settings">
-                  <h3>{t('Slideshow GIF', 'GIF slideshow')}</h3>
-                  {photos.length >= 2 ? <>
+                  {layout.count > 1 && photos.length >= 2 && <>
+                    <h3>{t('Slideshow GIF', 'GIF slideshow')}</h3>
                     <p>{t('Satu area foto menampilkan semua jepretan secara bergantian tanpa template bingkai. Warna, filter, dekorasi, dan stiker ikut tersimpan. Template bingkai tetap digunakan pada PNG.', 'One photo opening displays every shot in sequence without a frame template. Colors, filters, decorations, and stickers are included. Your frame template still applies to PNG.')}</p>
                     <div className="segmented" role="group" aria-label={t('Interval slideshow GIF', 'GIF slideshow interval')}>
                       {([0.5, 1, 2] as const).map((seconds) => <button key={seconds} disabled={exporting} aria-pressed={gifSeconds === seconds} className={gifSeconds === seconds ? 'active' : ''} onClick={() => setGifSeconds(seconds)}>{lang === 'id' ? String(seconds).replace('.', ',') : seconds} {t('detik', 'seconds')}</button>)}
                     </div>
-                  </> : <p>{t('GIF slideshow memerlukan minimal 2 foto. Layout ini tetap bisa diunduh sebagai PNG.', 'GIF slideshow needs at least 2 photos. This layout can still be downloaded as PNG.')}</p>}
+                  </>}
                   <button className="plain" disabled={exporting} onClick={startOver}>{t('Mulai sesi baru', 'Start a new session')} ↻</button>
                 </div>
               </section>
@@ -1992,13 +2034,12 @@ function App({ saved = null, storageUnavailable = false }: { saved?: PhotoSessio
                     <strong>{t('Sudah cocok dengan hasilnya?', 'Happy with your photos?')}</strong>
                     <span>{t('Simpan sebelum memulai sesi baru.', 'Save before starting a new session.')}</span>
                   </div>
-                  <label className="export-format">
-                    <span>{t('Format', 'Format')}</span>
-                    <select value={exportFormat} disabled={exporting} onChange={(event) => setExportFormat(event.target.value as 'png' | 'gif')}>
+                  {layout.count > 1 && <label className="export-format">
+                    <select aria-label={t('Format unduhan', 'Download format')} value={exportFormat} disabled={exporting} onChange={(event) => setExportFormat(event.target.value as 'png' | 'gif')}>
                       <option value="png">PNG</option>
                       <option value="gif" disabled={photos.length < 2}>GIF</option>
                     </select>
-                  </label>
+                  </label>}
                   <button
                     className="primary"
 

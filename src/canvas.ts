@@ -20,14 +20,14 @@ export async function renderStrip(layout:Layout,photos:string[],opts:Options,max
  const c=document.createElement('canvas');c.width=g.width;c.height=g.height;
  const x=c.getContext('2d')!;x.fillStyle=opts.color;x.fillRect(0,0,c.width,c.height);
  for(let i=0;i<g.slots.length;i++){const s=g.slots[i];if(photos[i]){const img=await loadImage(photos[i]);x.drawImage(filteredImage(img,Math.round(s.w),Math.round(s.h),opts),s.x,s.y,s.w,s.h);}else{x.fillStyle='#e9e5dc';x.fillRect(s.x,s.y,s.w,s.h);}}
+ x.fillStyle='#111111';x.font='bold '+Math.round(28*g.scale)+'px sans-serif';x.textAlign='center';x.fillText('BOOTHPOP  /  made of moments',c.width/2,c.height-48*g.scale);
+ if(opts.frame){const img=await loadImage(opts.frame);x.drawImage(img,0,0,c.width,c.height);}
  if(opts.decoration!=='none'){x.strokeStyle='#111111';x.fillStyle=opts.decoration==='hearts'?'#F97CC4':'#F6CE46';x.lineWidth=3*factor;
  for(let i=0;i<g.slots.length;i++){const s=g.slots[i],cx=i%2?s.x+s.w:s.x,cy=s.y+s.h;
  x.save();x.translate(cx,cy);x.scale(factor,factor);x.lineWidth=3;x.beginPath();
  if(opts.decoration==='hearts'){x.moveTo(0,15);x.bezierCurveTo(-50,-15,-25,-50,0,-25);x.bezierCurveTo(25,-50,50,-15,0,15);}
  else {for(let k=0;k<10;k++){const a=k*Math.PI/5-Math.PI/2,r=k%2?14:32;k?x.lineTo(Math.cos(a)*r,Math.sin(a)*r):x.moveTo(Math.cos(a)*r,Math.sin(a)*r);}x.closePath();}
  x.fill();x.stroke();x.restore();}}
- x.fillStyle='#111111';x.font='bold '+Math.round(28*g.scale)+'px sans-serif';x.textAlign='center';x.fillText('BOOTHPOP  /  made of moments',c.width/2,c.height-48*g.scale);
- if(opts.frame){const img=await loadImage(opts.frame);x.drawImage(img,0,0,c.width,c.height);}
  for(const s of opts.stickers){const img=await loadImage(s.src),w=c.width*s.size/100,h=w*img.height/img.width;x.save();x.translate(c.width*s.x/100,c.height*s.y/100);x.rotate(s.rotation*Math.PI/180);x.drawImage(img,-w/2,-h/2,w,h);x.restore();}
  return c;
 }

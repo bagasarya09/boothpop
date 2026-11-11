@@ -23,3 +23,14 @@ test('B&W filter has equal RGB channels; uploaded overlay and sticker are compos
  assert.equal(p[0],p[1]);assert.equal(p[1],p[2]);
  const st=canvas.getContext('2d').getImageData(Math.round(g.width*.5),Math.round(g.height*.9),1,1).data;assert.equal(st[0],222);
 });
+
+test('Built-in stars and hearts remain visible over an opaque frame', async () => {
+ const layout = layouts[0], g = geometry(layout), slot = g.slots[0];
+ const frame = createCanvas(g.width, g.height), context = frame.getContext('2d');
+ context.fillStyle = '#FFFFFF'; context.fillRect(0, 0, g.width, g.height);
+ for (const [decoration, rgb] of [['stars', [246, 206, 70]], ['hearts', [249, 124, 196]]]) {
+  const canvas = await renderStrip(layout, Array(layout.count).fill(src), {color:'#FFFFFF', filter:'original', decoration, frame:frame.toDataURL('image/png'), stickers:[]});
+  const pixel = canvas.getContext('2d').getImageData(Math.round(slot.x), Math.round(slot.y + slot.h - 10), 1, 1).data;
+  assert.deepEqual(Array.from(pixel.slice(0, 3)), rgb);
+ }
+});
